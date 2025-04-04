@@ -85,7 +85,7 @@ DATABASES = {
         'NAME': os.getenv("DB_NAME"),
         'USER': os.getenv("DB_USER"),
         'PASSWORD': db_password_raw,
-        'HOST': '192.168.2.60',
+        'HOST': '@IP-where-is-mysql-db',
         'PORT': '3306',
     }
 }
