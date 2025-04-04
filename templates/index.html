@@ -1,0 +1,222 @@
+{% extends 'base.html' %}  <!-- Tells Django to use base.html as the layout -->
+{% load static %}         <!-- Still need load static if you use it in this template -->
+
+{% block title %}Dashboard - IR Platform{% endblock %} <!-- Set the specific title for this page -->
+
+{% block content %}       <!-- Start of the content block -->
+    <!-- ****** ALL YOUR PAGE-SPECIFIC HTML GOES HERE ****** -->
+    <div class="dashboard-container">
+        <div class="row d-flex flex-wrap justify-content-center">
+            <!-- Cards for alerts -->
+            <div class="col-md-2 mb-3" onclick="window.location.href='/alerts?severity=Critical&page=1';">
+                <div class="card shadow">
+                    <div class="card-body text-danger card-body-line-one">
+                        <h5 class="card-title fw-bold">Critical Incidents</h5>
+                        <p class="card-text incident-value">{{ critical }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 mb-3" onclick="window.location.href='/alerts?severity=Medium&page=1';">
+                <div class="card shadow">
+                    <div class="card-body text-warning card-body-line-one">
+                        <h5 class="card-title fw-bold">Medium Incidents</h5>
+                        <p class="card-text incident-value">{{ medium }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 mb-3" onclick="window.location.href='/alerts?status=resolved&page=1';">
+                <div class="card shadow">
+                    <div class="card-body text-success card-body-line-one">
+                        <h5 class="card-title fw-bold">Resolved Incidents</h5>
+                        <p class="card-text incident-value">{{ resolved_status }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 mb-3" onclick="window.location.href='/alerts?status=pending&page=1';">
+                <div class="card shadow">
+                    <div class="card-body text-secondary card-body-line-one">
+                        <h5 class="card-title fw-bold">Pending Incidents</h5>
+                        <p class="card-text incident-value">{{ pending_status }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2 mb-3" onclick="window.location.href='/alerts?status=error&page=1';">
+                <div class="card shadow">
+                    <div class="card-body text-primary card-body-line-one">
+                        <h5 class="card-title fw-bold">Error Incidents</h5>
+                        <p class="card-text incident-value">{{ error_status }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-wrapper">
+        <div class="container mt-4">  {# Container might be redundant if base.html has one around content #}
+            <div class="row gy-4 flex-wrap">
+                <!-- Top 5 Targets Card -->
+                <div class="col-md-4">
+                    <div class="card shadow chart-card">
+                        <div class="card-body">
+                            <div class="chart-container text-center">
+                                <h5 class="card-title text-center">Top 5 Targets</h5>
+                                <canvas id="targetsChart"></canvas>
+                            </div>
+                            <div class="chart-text mt-3">
+                                <ul class="list-group mt-3">
+                                    {% for target in top_targets %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <strong>{{ target.computer }}</strong>
+                                        <span class="badge bg-primary rounded-pill">{{ target.incident_count }}</span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top 5 Attackers Card -->
+                <div class="col-md-4">
+                    <div class="card shadow chart-card">
+                        <div class="card-body">
+                            <div class="chart-container text-center">
+                                <h5 class="card-title text-center">Top 5 Attackers</h5>
+                                <canvas id="attackersChart"></canvas>
+                            </div>
+                            <div class="chart-text mt-3">
+                                <ul class="list-group mt-3">
+                                    {% for attacker in top_attackers %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <strong>{{ attacker.source }}</strong>
+                                        <span class="badge bg-primary rounded-pill">{{ attacker.attack_count }}</span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top 5 Attacks Card -->
+                <div class="col-md-4">
+                    <div class="card shadow chart-card">
+                        <div class="card-body">
+                            <div class="chart-container text-center">
+                                <h5 class="card-title text-center">Top 5 Attacks</h5>
+                                <canvas id="attacksChart"></canvas>
+                            </div>
+                            <div class="chart-text mt-3">
+                                <ul class="list-group mt-3">
+                                    {% for attack, count in top_attacks %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <strong>{{ attack }}</strong>
+                                        <span class="badge bg-primary rounded-pill">{{ count }}</span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ****** END OF PAGE-SPECIFIC HTML ****** -->
+{% endblock %} <!-- End of the content block -->
+
+
+{% block scripts %} <!-- Start of the scripts block -->
+    <!-- ****** YOUR PAGE-SPECIFIC JAVASCRIPT GOES HERE ****** -->
+
+    <!-- Chart.js Initialization Script -->
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Make sure the canvas elements exist before trying to get context
+        var targetCanvas = document.getElementById("targetsChart");
+        var attackerCanvas = document.getElementById("attackersChart");
+        var attackCanvas = document.getElementById("attacksChart");
+
+        if (targetCanvas) {
+            var targetCtx = targetCanvas.getContext("2d");
+            var targetData = {
+                labels: [{% for target in top_targets %}"{{ target.computer|escapejs }}",{% endfor %}],
+                datasets: [{
+                    data: [{% for target in top_targets %}{{ target.incident_count }},{% endfor %}],
+                    backgroundColor: ["#3498db", "#2980b9", "#1abc9c", "#2ecc71", "#e67e22"],
+                    borderWidth: 1
+                }]
+            };
+            new Chart(targetCtx, { type: "doughnut", data: targetData });
+        }
+
+       if (attackerCanvas) {
+            var attackerCtx = attackerCanvas.getContext("2d");
+            var attackerData = {
+                labels: [{% for attacker in top_attackers %}"{{ attacker.source|escapejs }}",{% endfor %}],
+                datasets: [{
+                    data: [{% for attacker in top_attackers %}{{ attacker.attack_count }},{% endfor %}],
+                    backgroundColor: ["#e74c3c", "#c0392b", "#d35400", "#f39c12", "#f1c40f"],
+                    borderWidth: 1
+                }]
+            };
+            new Chart(attackerCtx, { type: "doughnut", data: attackerData });
+        }
+
+        if (attackCanvas) {
+            var attackCtx = attackCanvas.getContext("2d");
+            var attackData = {
+                labels: [{% for attack, count in top_attacks %}"{{ attack|escapejs }}",{% endfor %}],
+                datasets: [{
+                    data: [{% for attack, count in top_attacks %}{{ count }},{% endfor %}],
+                    backgroundColor: ["#9b59b6", "#8e44ad", "#34495e", "#2c3e50", "#7f8c8d"],
+                    borderWidth: 1
+                }]
+            };
+            new Chart(attackCtx, { type: "doughnut", data: attackData });
+        }
+    });
+    </script>
+
+    <!-- Fetch API Script -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fetchButton = document.getElementById('fetch-low-alerts-btn-fetch'); // Ensure this button exists on this page if script is here
+        if (fetchButton) {
+            fetchButton.addEventListener('click', function() {
+                const apiUrl = this.dataset.apiUrl;
+                const params = new URLSearchParams({
+                    severity: 'low',
+                    page: 1
+                });
+                const urlWithParams = `${apiUrl}?${params.toString()}`;
+
+                fetch(urlWithParams, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(`HTTP error! Status: ${response.status}, Body: ${text}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Success:", data);
+                    alert('Fetched alerts successfully!');
+                })
+                .catch(error => {
+                    console.error("Fetch Error:", error);
+                    alert('Error fetching alerts. Check console for details.');
+                });
+            });
+        }
+    });
+    </script>
+    <!-- ****** END OF PAGE-SPECIFIC JAVASCRIPT ****** -->
+{% endblock %} <!-- End of the scripts block -->

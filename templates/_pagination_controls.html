@@ -1,0 +1,46 @@
+<!-- templates/_pagination_controls.html -->
+{% if alerts_page.paginator.num_pages > 1 %}
+<nav aria-label="Alerts navigation">
+    <ul class="pagination justify-content-center">
+
+        {% if alerts_page.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="#" data-page="{{ alerts_page.previous_page_number }}" aria-label="Previous">
+                    <span aria-hidden="true">«</span>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link" aria-hidden="true">«</span>
+            </li>
+        {% endif %}
+
+        {% for i in alerts_page.paginator.page_range %}
+            {% if alerts_page.number == i %}
+                <li class="page-item active" aria-current="page"><span class="page-link">{{ i }}</span></li>
+            {% elif i > alerts_page.number|add:'-3' and i < alerts_page.number|add:'3' %}
+                 {# Show pages near the current page #}
+                <li class="page-item"><a class="page-link" href="#" data-page="{{ i }}">{{ i }}</a></li>
+            {% elif i == 1 or i == alerts_page.paginator.num_pages %}
+                 {# Always show first and last page #}
+                 {% if i == 1 and alerts_page.number > 4 %} <li class="page-item disabled"><span class="page-link">...</span></li> {% endif %}
+                 <li class="page-item"><a class="page-link" href="#" data-page="{{ i }}">{{ i }}</a></li>
+                 {% if i == alerts_page.paginator.num_pages and alerts_page.number < alerts_page.paginator.num_pages|add:'-3' %} <li class="page-item disabled"><span class="page-link">...</span></li> {% endif %}
+            {% endif %}
+        {% endfor %}
+
+        {% if alerts_page.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="#" data-page="{{ alerts_page.next_page_number }}" aria-label="Next">
+                    <span aria-hidden="true">»</span>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link" aria-hidden="true">»</span>
+            </li>
+        {% endif %}
+
+    </ul>
+</nav>
+{% endif %}

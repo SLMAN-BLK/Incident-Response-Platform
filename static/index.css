@@ -1,0 +1,184 @@
+body {
+    background-color: #f8f9fa;
+}
+
+/* Navbar styling */
+.navbar {
+   /* background-color: #2c3e50  !important;*/ /* Fond blanc */
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+    padding-top: 12px;
+    padding-bottom: 12px;
+
+}
+
+.navbar-dark .navbar-nav .nav-link {
+    color: #ffffff !important; /* Texte noir */
+    font-weight: bold;
+    margin-left: 20px;
+    
+}
+
+
+.navbar-collapse {
+    display: flex;
+    justify-content: space-between;
+}
+
+.navbar-nav {
+    margin-left: auto;
+}
+
+/* Ajuster la taille et l'apparence des cartes */
+.dashboard-container {
+    margin: 40px;
+}
+
+.card {
+    background-color: white;
+    border-radius: 15px;
+    padding: 5px;
+    width: 180px; /* Ajuste la largeur pour toutes les cartes */
+    transition: transform 0.2s ease-in-out;
+    margin-bottom: 20px;
+}
+
+.card:hover {
+    transform: scale(1.08);
+}
+
+.card-body {
+    text-align: center;
+    font-weight: bold;
+}
+
+/* Agrandir la taille des valeurs */
+.incident-value {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.shadow {
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.dropdown-menu {
+    min-width: 200px;
+}
+.dropdown-menu a {
+    color: rgb(0, 0, 0);
+    padding: 10px 15px;
+    display: block;
+}
+.dropdown-menu a:hover {
+    background-color: #f8f9fa;
+}
+.profile-header {
+    font-weight: bold;
+    font-size: 16px;
+    padding: 10px 15px;
+    color: gray;
+    background: white;
+    border-bottom: 1px solid #ddd;
+}
+.logout {
+    color: red !important;
+    font-weight: bold;
+}
+.logout:hover {
+    background-color: #f8d7da;
+}
+.me-2 {
+    margin-left: 20px;
+} 
+
+.chart-card {
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.3s ease-in-out;
+    width: 300px;
+    min-height: 350px; /* Hauteur adaptée */
+    display: flex;
+    flex-direction: row;
+    justify-content: center; /* Centrer verticalement */
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column; /* Aligne les éléments verticalement */
+    align-items: center; /* Centre les éléments horizontalement */
+    padding: 20px; /* Espacement interne agréable */
+}
+
+.chart-container {
+    flex: 0 0 auto;
+    width: 200px; /* Taille ajustée pour un rendu propre */
+    margin-bottom: 20px; /* Espacement entre le graphique et le texte */
+}
+
+.chart-text {
+    flex: 1;
+    padding: 10px;
+    word-wrap: break-word; /* Coupe les mots longs */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+    text-align: center; /* Titre centré */
+}
+
+.list-group-item {
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px;
+    border-radius: 8px; /* Arrondit les bords pour un effet moderne */
+    background-color: #f9f9f9; /* Couleur légère pour le contraste */
+    width: 240px;
+}
+
+.badge {
+    font-size: 0.8rem;
+    padding: 5px 10px;
+    font-weight: bold;
+}
+
+.card {
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1); /* Adjust shadow if needed */
+    margin: auto; /* Ensures centering */
+}
+
+.card-body-line-one{
+    cursor: pointer;
+}
+
+
+
+
+
+/*css pour les box */
+
+.chart-card{
+    width:350px;
+    height:600px;
+    
+}
+
+.chart-container{
+
+    width:250px;
+}
+li{
+    margin-top: 5px;
+}
+
+.dashboard-wrapper{
+    margin-bottom:50px;
+}
+.navbar {
+    background-color: #2c3e50 ;
+}

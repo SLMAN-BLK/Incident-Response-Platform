@@ -1,0 +1,118 @@
+{% extends 'base.html' %}  <!-- Inherit from base.html -->
+{% load static %}        <!-- Load static files tag -->
+
+{% block title %}Chat With AI - IR Platform{% endblock %} <!-- Set the page title -->
+
+{% block extra_head %}    <!-- Add specific CSS/JS needed in the <head> -->
+    <link href="{% static 'chatbot.css' %}" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+{% endblock %}
+
+{% block content %}       <!-- Main content for this specific page -->
+    <div id="chat-container">
+        <h2>Let's Chat!</h2>
+        <div class="chat-box" id="chat-box">
+            <!-- Initial message or leave empty -->
+            <div class="message bot-message">Hello! How can I help you today?</div>
+        </div>
+        <div class="input-area"> {# Added a wrapper div for better styling if needed #}
+            <input type="text" id="query" placeholder="Type your question..." />
+            <button onclick="sendQuery()">Send</button>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}       <!-- Page-specific JavaScript -->
+    <script>
+        // Ensure the DOM is ready before accessing elements
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const chatBox = document.getElementById("chat-box");
+            const queryInput = document.getElementById("query");
+
+            function addMessage(content, isUser) {
+                if (!chatBox) return; // Add check in case element isn't found
+
+                const messageDiv = document.createElement("div");
+                messageDiv.className = "message " + (isUser ? "user-message" : "bot-message");
+
+                // Convert Markdown to HTML using the marked library
+                // Ensure marked is loaded (it should be from the extra_head block)
+                if (typeof marked !== 'undefined') {
+                    messageDiv.innerHTML = marked.parse(content);
+                } else {
+                    // Fallback if marked fails to load
+                    const textNode = document.createTextNode(content);
+                    messageDiv.appendChild(textNode);
+                    console.error("marked.js library not loaded.");
+                }
+
+
+                chatBox.appendChild(messageDiv);
+                chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom
+            }
+
+            // Make sendQuery global or attach event listener here
+            window.sendQuery = function() {
+                if (!queryInput || !chatBox) return; // Add checks
+
+                const query = queryInput.value.trim();
+                if (!query) {
+                    // Optionally provide user feedback differently, e.g., shaking the input
+                    // alert("Please enter a message.");
+                    return;
+                }
+
+                // Display user message
+                addMessage(query, true);
+
+                // Add a temporary "typing..." indicator for the bot
+                const typingIndicator = document.createElement("div");
+                typingIndicator.className = "message bot-message typing-indicator";
+                typingIndicator.innerHTML = "<i>Typing...</i>";
+                chatBox.appendChild(typingIndicator);
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+
+                // Fetch bot response
+                fetch(`/chatbot?query=${encodeURIComponent(query)}`) // Make sure this URL is correct
+                    .then(response => {
+                        chatBox.removeChild(typingIndicator); // Remove typing indicator
+                        if (!response.ok) {
+                             return response.text().then(text => { // Try to get error text
+                                throw new Error(`Failed to fetch response. Status: ${response.status}. Message: ${text || 'Server error'}`);
+                             });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        const botResponse = data.response || "Hmm, I don't seem to have an answer for that right now.";
+                        addMessage(botResponse, false);
+                    })
+                    .catch(error => {
+                        console.error("Chatbot fetch error:", error);
+                        addMessage("Sorry, an error occurred while getting a response: " + error.message, false);
+                         // Ensure typing indicator is removed even on error
+                        const existingIndicator = chatBox.querySelector('.typing-indicator');
+                        if (existingIndicator) {
+                            chatBox.removeChild(existingIndicator);
+                        }
+                    });
+
+                queryInput.value = ""; // Clear input
+                queryInput.focus(); // Keep focus on input
+            }
+
+            // Attach Enter key listener to the input field
+            if (queryInput) {
+                queryInput.addEventListener("keydown", function(event) {
+                    if (event.key === "Enter") {
+                         event.preventDefault(); // Prevent default form submission if it were in a form
+                         sendQuery();
+                    }
+                });
+            }
+        });
+
+    </script>
+{% endblock %}

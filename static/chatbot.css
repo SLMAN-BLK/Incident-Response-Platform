@@ -1,0 +1,145 @@
+/* General Body Styling (Optional but Recommended) */
+body {
+    font-family: sans-serif; /* Use a common sans-serif font */
+    background-color: #f4f7f6; /* Light background for the whole page */
+    margin: 0; /* Remove default body margin */
+    padding-bottom: 20px;
+}
+
+/* Chat Container Styling */
+#chat-container {
+    background-color: #ffffff;
+    padding: 25px; /* Slightly increased padding */
+    border-radius: 12px; /* Slightly more rounded corners */
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); /* Adjusted shadow */
+    width: 90%;          /* Takes 90% of parent width */
+    max-width: 800px;     /* Adjusted max-width */
+
+    /* --- Centering --- */
+    margin: 30px auto;  /* 30px top/bottom margin, auto left/right */
+}
+
+/* Heading Styling */
+h2 {
+    color: #333;
+    margin-top: 0; /* Remove default top margin if it's the first element */
+    margin-bottom: 25px; /* Increased bottom margin */
+    text-align: center;  /* Center the heading text */
+    font-weight: 600; /* Slightly bolder heading */
+}
+
+/* Chat Box Area */
+.chat-box {
+    border: 1px solid #e0e0e0; /* Lighter border */
+    border-radius: 8px;
+    padding: 15px; /* Increased padding */
+    margin-bottom: 20px;
+    height: 450px; /* Fixed height */
+    max-height: 65vh; /* Responsive max height based on viewport */
+    overflow-y: auto; /* Enable vertical scrolling */
+    background-color: #f9f9f9;
+    scroll-behavior: smooth; /* Smooth scrolling */
+}
+
+/* General Message Styling */
+.message {
+    margin-bottom: 12px; /* Increased space between messages */
+    padding: 10px 15px;
+    border-radius: 18px; /* More rounded bubbles */
+    max-width: 80%; /* Limit message width */
+    word-wrap: break-word; /* Break long words */
+    line-height: 1.4; /* Improve readability */
+    clear: both; /* Ensure messages don't overlap */
+    display: block; /* Ensure block layout */
+}
+
+/* User Message Styling */
+.user-message {
+    background-color: #007bff; /* Bootstrap primary blue */
+    color: white;
+    margin-left: auto; /* Push to the right */
+    margin-right: 5px;
+    border-bottom-right-radius: 5px; /* Slightly flatten one corner */
+}
+
+/* Bot Message Styling */
+.bot-message {
+    background-color: #e9ecef; /* Bootstrap light grey */
+    color: #333;
+    margin-right: auto; /* Push to the left */
+    margin-left: 5px;
+    border-bottom-left-radius: 5px; /* Slightly flatten one corner */
+}
+
+/* Typing Indicator Styling */
+.typing-indicator {
+    font-style: italic;
+    color: #777;
+    padding: 5px 15px; /* Match message padding somewhat */
+    background-color: transparent !important; /* Ensure no background */
+}
+
+/* Input Area Styling */
+.input-area {
+    display: flex; /* Use flexbox for alignment */
+    align-items: center; /* Vertically align input and button */
+    margin-top: 15px;
+    padding-top: 15px; /* Add space above input */
+    border-top: 1px solid #e0e0e0; /* Separator line */
+}
+
+/* Text Input Styling */
+input[type="text"] {
+    flex-grow: 1; /* Allow input to take available space */
+    padding: 12px 15px; /* Comfortable padding */
+    border: 1px solid #ccc;
+    border-radius: 20px; /* Rounded input */
+    margin-right: 10px;
+    font-size: 1em;
+    outline: none; /* Remove default focus outline */
+    transition: border-color 0.2s ease-in-out;
+}
+
+input[type="text"]:focus {
+    border-color: #007bff; /* Highlight border on focus */
+}
+
+/* Send Button Styling */
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 20px; /* Match input rounding */
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 500;
+    padding: 12px 20px;
+    flex-shrink: 0; /* Prevent button from shrinking */
+    transition: background-color 0.2s ease-in-out;
+}
+
+button:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+}
+
+/* Make chat box scrollbar slightly less obtrusive (Webkit browsers) */
+.chat-box::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-box::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.chat-box::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 10px;
+}
+
+.chat-box::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+}
+.navbar {
+    background-color: #2c3e50 ;
+}

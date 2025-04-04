@@ -1,0 +1,715 @@
+{% load static %} {# Good practice to include if using any Django tags like url #}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    <!-- Page Title -->
+    <title>Alert Details - {{ id }}</title>
+    <!-- Internal Styles (Recommended to move to a separate static/css/alert_details.css file) -->
+    <style>
+        /* Base body styling */
+        body {
+            background-color: #f8f9fa; /* Light grey background */
+            padding-bottom:1.5rem;    /* Bottom padding */
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            /* Add padding-top to prevent content from hiding under fixed navbar if you make it fixed */
+            /* padding-top: 70px; /* Adjust based on navbar height */
+        }
+
+        /* Card styling */
+        .card {
+            margin-bottom: 1.5rem; /* Spacing between cards */
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); /* Subtle shadow */
+            border: none; /* Remove default border if desired, rely on shadow */
+        }
+        .card-header {
+            background-color: #e9ecef; /* Header background */
+            border-bottom: 1px solid #dee2e6;
+        }
+        .card-header h2 {
+            margin-bottom: 0; /* Remove default margin */
+            font-size: 1.15rem; /* Slightly smaller header */
+            font-weight: 500;
+        }
+
+        /* Container for the AI output section (loading, error, results) */
+        .ai-output-container {
+             margin-top: 1rem; /* Space above the AI output */
+             border: 1px solid #dee2e6; /* Border around the output section */
+             border-radius: 0.375rem; /* Bootstrap's default border radius */
+             padding: 1rem;
+             background-color: #ffffff; /* White background inside the container */
+             display: none; /* Initially hidden */
+        }
+       
+        /* The actual <pre> area where AI text appears */
+        .ai-output-area {
+            background-color: #f1f3f5; /* Lighter background for the code/text */
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin-top: 0.5rem; /* Space between loading/error and output */
+            min-height: 100px; /* Minimum height */
+            white-space: pre-wrap; /* Preserve whitespace and wrap lines */
+            word-wrap: break-word; /* Break long words */
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; /* Monospace font stack */
+            font-size: 0.9em; /* Slightly smaller font size */
+            border: 1px solid #ced4da;
+            display: block; /* Ensure it takes full width */
+            max-width: 100%;
+            overflow-x: auto; /* Allow horizontal scroll if really needed */
+            line-height: 1.5;
+        }
+
+         /* Styling for loading indicator and error messages */
+         .loading-indicator,
+         .error-message {
+            font-style: italic;
+            padding: 0.5rem 0;
+            display: none; /* Hidden by default, shown via JS */
+         }
+         .error-message {
+            color: var(--bs-danger); /* Use Bootstrap's danger color */
+            font-weight: bold;
+         }
+         .loading-indicator {
+            color: var(--bs-secondary); /* Use Bootstrap's secondary color */
+         }
+
+         /* Style for AI button when loading: hides text, shows spinner */
+         .ai-button.loading .button-text {
+            visibility: hidden; /* Hide the text but keep space */
+            opacity: 0;
+         }
+         .ai-button .spinner-border {
+            display: none; /* Spinner hidden by default */
+         }
+         .ai-button.loading .spinner-border {
+             display: inline-block; /* Show spinner when loading */
+             position: absolute; /* Center spinner in button */
+             left: 0;
+             right: 0;
+             top: 0;
+             bottom: 0;
+             margin: auto;
+         }
+         .ai-button {
+             position: relative; /* Needed for absolute positioning of spinner */
+             transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out; /* Smooth transition */
+         }
+
+
+         /* Styling for the original text display areas */
+         .original-text-display {
+            background-color: #f8f9fa; /* Slightly off-white background */
+            padding: 0.75rem 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            white-space: pre-wrap; /* Preserve formatting */
+            word-break: break-word; /* Break long words/strings */
+            font-size: 0.95em;
+            margin-top: 0.25rem; /* Small space below the label */
+            max-height: 300px; /* Limit height and make scrollable if needed */
+            overflow-y: auto;
+         }
+
+         /* Add a little margin below labels */
+         .card-body p strong {
+            margin-bottom: 0.25rem;
+            display: inline-block;
+         }
+         nav{
+            padding-top: 12px;
+            padding-bottom: 12px;
+        }
+        .navbar{
+            padding-top: 15px;
+            padding-bottom: 15px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- ****** START: Navbar Added Here ****** -->
+    <nav class="navbar navbar-expand-lg navbar-dark " style="background-color: #2c3e50 ;"> {# Added mb-4 for spacing below navbar #}
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'index' %}">IR Platform</a> {# Added a Brand link #}
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavGlobal" aria-controls="navbarNavGlobal" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNavGlobal"> {# Changed ID slightly to avoid potential conflicts #}
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'index' %}">Dashboard</a></li>
+                    {# Add other common links as needed, ensure the url names exist #}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'alerts_dashboard' %}">Incident Response</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'chat_page' %}">Chat With AI</a></li>
+
+                    {% if user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                           <span class="me-1">👤</span> {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
+                             {# Optional: Can add a non-clickable header #}
+                            <li><h6 class="dropdown-header">User Panel</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'profile' %}">Profile</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+                        </ul>
+                    </li>
+                    {% else %}
+                         {# Optional: Add Login/Register links if user is not logged in #}
+                         <!-- <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Login</a></li> -->
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <!-- ****** END: Navbar Added Here ****** -->
+
+
+    <!-- ****** START: Original Page Content ****** -->
+    <div class="container">
+        {# Note: No form directly here, CSRF token obtained via cookie in JS #}
+        {# {% csrf_token %} #}
+
+        <h1 class="mb-4 display-6">Alert Details</h1>
+
+        <!-- Section for Alert Information -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                 <h2 class="h5 mb-0">Alert Information</h2>
+                 <!-- AI Button for Alert Section -->
+                 <button type="button"
+                         class="btn btn-outline-primary btn-sm ai-button px-3"
+                         data-section="alert"
+                         data-alert-id="{{ id }}"
+                         onclick="handleAI(this)"
+                         title="Analyse the alert details using AI">
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span class="button-text">Analyse with AI</span>
+                 </button>
+            </div>
+            <div class="card-body">
+                <p class="mb-1"><strong>Alert ID:</strong> <span id="alert-id-display">{{ id }}</span></p> {# Added id for easier JS access if needed #}
+                <p class="mb-1"><strong>Details:</strong></p>
+                <!-- Display Area for Original Alert Details -->
+                <div id="alert-details-text" class="original-text-display">
+                    {{ falert|default:"No details provided."|linebreaksbr }}
+                </div>
+
+                 <!-- AI Output Container for Alert -->
+                 <div id="ai-output-container-alert" class="ai-output-container">
+                     <!-- Loading Indicator -->
+                     <div class="loading-indicator">
+                        <div class="spinner-border spinner-border-sm text-secondary me-2" role="status">
+                           <span class="visually-hidden">Loading...</span>
+                         </div>
+                         Analysing alert details with AI...
+                     </div>
+                     <!-- Error Message Area -->
+                     <div class="error-message"></div>
+                     <!-- AI Output Text Area -->
+                     <pre id="ai-output-area-alert" class="ai-output-area" aria-live="polite"></pre>
+                 </div>
+            </div>
+        </div>
+
+        <!-- Conditionally display the report/response section -->
+        {% if status == 'resolved' %}
+             <!-- repondu by wazuh auto Response -->
+            {% if frepp %}
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h2 class="h5 mb-0">Wazuh Report / Response</h2> {# Clarified title #}
+                        <!-- AI Button for Report Section -->
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm ai-button px-3"
+                                data-section="report"
+                                data-alert-id="{{ id }}"
+                                onclick="handleAI(this)"
+                                title="Analyse the report/response using AI">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            <span class="button-text">Analyse with AI</span>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-1"><strong>Details:</strong></p>
+                        <!-- Display Area for Original Report/Response -->
+                        <div id="report-response-text" class="original-text-display">
+                            {{ frepp|linebreaksbr }}
+                        </div>
+
+                        <!-- AI Output Container for Report -->
+                        <div id="ai-output-container-report" class="ai-output-container">
+                            <!-- Loading Indicator -->
+                            <div class="loading-indicator">
+                                <div class="spinner-border spinner-border-sm text-secondary me-2" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                Analysing report/response with AI...
+                            </div>
+                            <!-- Error Message Area -->
+                            <div class="error-message"></div>
+                            <!-- AI Output Text Area -->
+                            <pre id="ai-output-area-report" class="ai-output-area" aria-live="polite"></pre>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+             <!-- Incident Resolved Section -->
+            <div class="card" id="theincidentsolved"> {# Container for resolved info AND modify button #}
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2 class="h5 mb-0">Resolution Details</h2> {# Renamed for clarity #}
+                     {% if user.username == "superadmin" %}
+                        {# Add data attributes to pass info to JS modify() function #}
+                        <button type="button" id="modify-response-btn" class="btn btn-warning btn-sm"
+                                data-alert-id="{{ id }}"
+                                data-username="{{ user.username }}"
+                                onclick="modify(this)">
+                            Modify Response
+                        </button>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <p class="mb-1"><strong>Responded by:</strong></p>
+                    <div id="responder_name" class="original-text-display">
+                        {{ responder_name }}
+                    </div>
+
+                    <p class="mt-3 mb-1"><strong>Response Description:</strong></p> {# Added margin-top #}
+                    <div id="response_desc" class="original-text-display">
+                        {{ response_desc }}
+                    </div>
+                     <!-- Status message area (used by modify form later) -->
+                     <div id="resolve-form-status-modify" role="alert" class="mt-3"></div>
+                </div>
+            </div>
+
+        {% else %} {# Status is NOT resolved #}
+
+        <!-- Resolution Form -->
+        <div class="card" id="resolve-form-container">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Resolve Alert</h2>
+            </div>
+            <div class="card-body">
+                {# Use novalidate to disable default browser validation UI, rely on JS/Bootstrap styles #}
+                <form id="resolve-form" novalidate>
+                    {# Hidden input to send the alert ID with the form data #}
+                    <input type="hidden" name="alert_id" value="{{ id }}">
+                    <input type="hidden" name="username" value="{{ user.username }}">
+
+                    {# --- Confirmation Checkbox --- #}
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="resolve-confirm" name="resolve_confirm" required>
+                        <label class="form-check-label" for="resolve-confirm">I confirm this alert is resolved</label>
+                        {# Feedback message shown by JS if checkbox is not checked on submit #}
+                        <div class="invalid-feedback">
+                            You must check this box to confirm resolution.
+                        </div>
+                    </div>
+
+                    {# --- Resolution Description Textarea --- #}
+                    <div class="mb-3">
+                        <label for="response-description" class="form-label">Resolution Description:</label>
+                        <textarea class="form-control" id="response-description" name="response_description" rows="4" required placeholder="Enter details about how the alert was resolved..."></textarea>
+                        {# Feedback message shown by JS if textarea is empty on submit #}
+                         <div class="invalid-feedback">
+                            Please provide a resolution description.
+                         </div>
+                    </div>
+
+                    {# --- Submit Button --- #}
+                    <button type="submit" id="submit-response-btn" class="btn btn-success">
+                         {# Spinner initially hidden #}
+                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+                         {# Button text initially visible #}
+                         <span class="button-text">Mark as Resolved</span>
+                    </button>
+                </form>
+
+                 <!-- Area to display success or error messages from the form API submission -->
+                 <div id="resolve-form-status" role="alert" class="mt-3"></div> {# Added mt-3 for spacing #}
+            </div>
+        </div>
+
+        {% endif %} {# End of status check #}
+
+    </div> <!-- End of container -->
+     <!-- ****** END: Original Page Content ****** -->
+
+
+    <!-- Optional: Bootstrap JS Bundle (includes Popper) - UNCOMMENTED FOR NAVBAR -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- ****** START: Original Page JavaScript ****** -->
+    <script>
+        // Function to get CSRF token from cookies (Standard Django way)
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken'); // Get the token once
+
+        // --- AI Handling Function ---
+        async function handleAI(buttonElement) {
+            const section = buttonElement.dataset.section;
+            const alertId = buttonElement.dataset.alertId;
+            console.log(`AI button clicked for section: ${section}, Alert ID: ${alertId}`);
+
+            let textToAnalyze = '';
+            let textElementId = '';
+            let outputContainerId = '';
+            let outputAreaId = '';
+            let errorMsgElement;
+            let loadingIndicatorElement;
+            let outputContainer, outputArea, textElement; // Declare here for broader scope
+
+            // Determine element IDs based on the section associated with the clicked button
+            if (section === 'alert') {
+                textElementId = 'alert-details-text';
+                outputContainerId = 'ai-output-container-alert';
+                outputAreaId = 'ai-output-area-alert';
+            } else if (section === 'report') {
+                 textElementId = 'report-response-text';
+                 outputContainerId = 'ai-output-container-report';
+                 outputAreaId = 'ai-output-area-report';
+            } else {
+                console.error("Unknown section:", section);
+                alert("Error: Unknown section specified for AI analysis.");
+                return; // Stop execution if section is invalid
+            }
+
+            // Get necessary DOM elements
+            textElement = document.getElementById(textElementId);
+            outputContainer = document.getElementById(outputContainerId);
+            outputArea = document.getElementById(outputAreaId);
+
+            // Validate that all essential DOM elements were found
+            if (!textElement || !outputContainer || !outputArea) {
+                 console.error(`Error finding required elements for section "${section}". Check IDs: ${textElementId}, ${outputContainerId}, ${outputAreaId}`);
+                 alert(`Error: Page structure mismatch. Could not find necessary elements for ${section} analysis.`);
+                 return; // Stop execution
+            }
+
+            // Find the loading indicator and error message area within the specific output container
+            loadingIndicatorElement = outputContainer.querySelector('.loading-indicator');
+            errorMsgElement = outputContainer.querySelector('.error-message');
+
+             if (!loadingIndicatorElement || !errorMsgElement) {
+                 console.error(`Error finding loading/error elements within container ${outputContainerId}.`);
+                 // Decide if you want to proceed without indicators or stop. Stopping is safer.
+                 alert(`Error: Could not find loading/error display elements for ${section}.`);
+                 return;
+             }
+
+            // Get the text content from the designated element and trim whitespace
+            textToAnalyze = textElement.innerText.trim();
+
+            // Check if there is any text to analyze
+            if (!textToAnalyze) {
+                console.warn("No text found to analyze for section:", section);
+                // Prepare UI to show "nothing to analyze" message
+                outputArea.textContent = ''; // Clear any previous output
+                errorMsgElement.textContent = 'There is no text in this section to analyze.';
+                errorMsgElement.style.display = 'block'; // Show the error/info message
+                loadingIndicatorElement.style.display = 'none'; // Ensure loading is hidden
+                outputContainer.style.display = 'block'; // Ensure the container is visible
+                return; // Stop execution
+            }
+
+            console.log(`Text to send to AI (first 150 chars): ${textToAnalyze.substring(0, 150)}...`);
+
+            // --- Prepare UI for Loading State ---
+            buttonElement.disabled = true;                // Disable button to prevent multi-clicks
+            buttonElement.classList.add('loading');       // Add 'loading' class for CSS to show spinner/hide text
+            outputArea.textContent = '';                  // Clear previous analysis results
+            errorMsgElement.textContent = '';             // Clear previous error messages
+            errorMsgElement.style.display = 'none';       // Hide error message area initially
+            loadingIndicatorElement.style.display = 'block'; // Show loading indicator
+            outputContainer.style.display = 'block';      // Make the entire AI output section visible
+
+            // --- Call the Backend API using Fetch ---
+            try {
+                // Use Django's url template tag to get the correct API endpoint URL
+                const apiUrl = "{% url 'analyze_ai_api' %}"; // Make sure 'analyze_ai_api' is the correct url name in urls.py
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken // Crucial for Django POST requests
+                    },
+                    body: JSON.stringify({
+                        text: textToAnalyze,      // The text to be analyzed
+                        alert_id: alertId,        // Alert ID context (optional for backend)
+                        section: section          // Section identifier (e.g., 'alert' or 'report')
+                    })
+                });
+
+                // Check if the HTTP response status indicates failure
+                if (!response.ok) {
+                     // Try to extract a meaningful error message from the response body
+                     let errorDetail = `API request failed! Status: ${response.status} ${response.statusText}`;
+                     try {
+                         // Assume backend sends JSON like {"error": "message"} or {"detail": "message"}
+                         const errData = await response.json();
+                         errorDetail += ` - ${errData.error || errData.detail || 'No specific error message provided.'}`;
+                     } catch (e) {
+                          // If parsing JSON fails, try to get plain text from the response
+                          const textError = await response.text();
+                          errorDetail += textError ? ` - ${textError}` : ' (Could not parse error response body)';
+                     }
+                    throw new Error(errorDetail); // Trigger the catch block with the detailed error
+                }
+
+                // --- Handle the Streaming Response Body ---
+                if (!response.body) {
+                     throw new Error("Response received, but body is missing. Cannot read stream.");
+                }
+
+                const reader = response.body.getReader();     // Get reader for the stream
+                const decoder = new TextDecoder();          // Standard UTF-8 decoder
+                let done = false;                           // Flag for stream completion
+
+                // Hide loading indicator now that streaming is starting (or about to)
+                loadingIndicatorElement.style.display = 'none';
+
+                // Read chunks from the stream until done
+                while (!done) {
+                    const { value, done: readerDone } = await reader.read();
+                    done = readerDone; // Update loop condition based on stream status
+                    if (value) {
+                        const chunk = decoder.decode(value, { stream: true }); // Decode Uint8Array chunk to string
+                        outputArea.textContent += chunk; // Append the decoded text chunk to the output area
+                        // Optional: Auto-scroll the output area to show the latest content
+                        // outputArea.scrollTop = outputArea.scrollHeight;
+                    }
+                }
+                 console.log("AI analysis stream finished successfully.");
+
+            } catch (error) {
+                // --- Handle Errors during Fetch or Streaming ---
+                console.error('Error during AI analysis request or streaming:', error);
+                // Ensure loading indicator is hidden
+                loadingIndicatorElement.style.display = 'none';
+                // Display the captured error message in the designated error area
+                errorMsgElement.textContent = `Error: ${error.message || 'An unknown error occurred during the analysis.'}`;
+                errorMsgElement.style.display = 'block'; // Make error message visible
+                // Keep the output container visible so the user sees the error message
+                outputContainer.style.display = 'block';
+            } finally {
+                 // --- Restore UI State (Always runs after try/catch) ---
+                 buttonElement.disabled = false;             // Re-enable the button
+                 buttonElement.classList.remove('loading');  // Remove 'loading' class to hide spinner/show text
+            }
+        }
+
+        // --- Resolution Form Handling ---
+
+        // Shared function to handle form submission via Fetch API
+        function handleResolveFormSubmit(formElement, statusElementId) {
+            // Perform client-side validation first
+            if (!formElement.checkValidity()) {
+                formElement.classList.add("was-validated"); // Show Bootstrap validation feedback
+                return; // Stop if invalid
+            }
+
+            const submitButton = formElement.querySelector("button[type='submit']");
+            const spinner = submitButton.querySelector(".spinner-border");
+            const buttonText = submitButton.querySelector(".button-text");
+            const statusMessage = document.getElementById(statusElementId);
+
+            if (!submitButton || !spinner || !buttonText || !statusMessage) {
+                 console.error("Could not find required form elements (button, spinner, text, status) for form:", formElement.id);
+                 alert("Error: Form UI elements missing.");
+                 return;
+            }
+
+            // Show loading state
+            submitButton.disabled = true;
+            spinner.style.display = "inline-block";
+            buttonText.style.display = "none";
+            statusMessage.textContent = ''; // Clear previous status
+            statusMessage.className = ''; // Clear previous classes
+            statusMessage.classList.add('mt-3'); // Ensure margin is present
+
+            // Gather form data
+            const formData = new FormData(formElement);
+            const jsonData = {
+                alert_id: formData.get("alert_id"),
+                username: formData.get("username"),
+                response_description: formData.get("response_description"),
+                // Note: resolve_confirm checkbox value isn't usually sent, validation handles it
+            };
+            console.log("Submitting resolution data:", jsonData);
+
+            // Send data to the Django API
+            // IMPORTANT: Replace 'resolve_alert_api' with the actual name of your URL pattern in urls.py
+            const apiUrl = "{% url 'resolve_alert' %}";
+            fetch(apiUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrftoken, // Use the globally fetched CSRF token
+                },
+                body: JSON.stringify(jsonData),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // Attempt to get error details from non-OK response
+                    return response.json().then(errData => {
+                        throw new Error(errData.error || errData.detail || `Request failed with status ${response.status}`);
+                    }).catch(() => {
+                        // If JSON parsing fails or no specific error, throw generic error
+                         throw new Error(`Request failed with status ${response.status}`);
+                    });
+                }
+                return response.json(); // Parse JSON body for successful responses
+            })
+            .then(data => {
+                // Handle successful response
+                if (data.success) {
+                    statusMessage.className = "alert alert-success mt-3"; // Added mt-3 back
+                    statusMessage.textContent = "Alert resolution updated successfully!";
+                    formElement.reset(); // Clear the form
+                    formElement.classList.remove("was-validated"); // Reset validation state
+                    // Consider removing the form or updating UI further if needed
+                    alert("Resolution successful! Reloading page..."); // Simple feedback
+                    location.reload(); // Reload the page to show the updated status
+                } else {
+                     // Handle cases where API returns success: false
+                    statusMessage.className = "alert alert-danger mt-3";
+                    statusMessage.textContent = data.error || "An unknown error occurred processing the request.";
+                }
+            })
+            .catch(error => {
+                 // Handle fetch errors (network issue, server error, JSON parsing failed)
+                console.error("Error submitting resolution form:", error);
+                statusMessage.className = "alert alert-danger mt-3";
+                statusMessage.textContent = `Error: ${error.message || "Failed to send data. Please check connection and try again."}`;
+            })
+            .finally(() => {
+                // Always restore button state
+                submitButton.disabled = false;
+                spinner.style.display = "none";
+                buttonText.style.display = "inline";
+            });
+        }
+
+        // --- Event Listener Attachment ---
+        document.addEventListener("DOMContentLoaded", function () {
+            // Attach listener to the initial resolve form (if it exists)
+            const initialForm = document.getElementById("resolve-form");
+            if (initialForm) {
+                initialForm.addEventListener("submit", function (event) {
+                    event.preventDefault(); // Prevent default HTML submission
+                    handleResolveFormSubmit(initialForm, "resolve-form-status"); // Use the shared handler
+                });
+            }
+
+             // Note: The listener for the 'modify' form is attached within the modify() function
+             // because that form is created dynamically.
+        });
+
+
+        // --- Modify Function (Replaces Resolved Info with Editable Form) ---
+        function modify(buttonElement) {
+            const alertId = buttonElement.dataset.alertId;
+            const username = buttonElement.dataset.username;
+            const resolvedCard = document.getElementById("theincidentsolved");
+            const resolvedCardBody = resolvedCard.querySelector(".card-body");
+            const existingDescElement = document.getElementById("response_desc");
+            const existingDesc = existingDescElement ? existingDescElement.innerText.trim() : '';
+
+            if (!resolvedCardBody || !alertId || !username) {
+                console.error("Cannot modify: Missing necessary elements or data attributes.");
+                alert("Error: Could not prepare modification form.");
+                return;
+            }
+
+            console.log(`Modifying response for Alert ID: ${alertId} by User: ${username}`);
+
+            // Create the form HTML string dynamically
+            // IMPORTANT: Ensure field names match what the shared handler expects ('alert_id', 'username', 'response_description')
+             const formHtml = `
+                <form id="resolve-form-modify" novalidate>
+                    <input type="hidden" name="alert_id" value="${alertId}">
+                    <input type="hidden" name="username" value="${username}">
+
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="resolve-confirm-modify" name="resolve_confirm" required checked> {# Pre-check confirm #}
+                        <label class="form-check-label" for="resolve-confirm-modify">I confirm this alert is resolved</label>
+                        <div class="invalid-feedback">
+                            You must check this box to confirm resolution.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="response-description-modify" class="form-label">Resolution Description:</label>
+                        <textarea class="form-control" id="response-description-modify" name="response_description" rows="4" required placeholder="Enter details about how the alert was resolved...">${existingDesc.replace(/</g, "<").replace(/>/g, ">")}</textarea> {# Pre-fill description, basic escaping #}
+                        <div class="invalid-feedback">
+                            Please provide a resolution description.
+                         </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-success">
+                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+                         <span class="button-text">Update Resolution</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary ms-2" onclick="location.reload();">Cancel</button> {# Add a cancel button #}
+                </form>
+                <!-- Status messages will appear in #resolve-form-status-modify -->
+            `;
+
+            // Replace the content of the card body with the form
+            // Keep the existing status div '#resolve-form-status-modify'
+            const statusDiv = resolvedCardBody.querySelector('#resolve-form-status-modify');
+            resolvedCardBody.innerHTML = formHtml; // Replace content
+            if(statusDiv) {
+                resolvedCardBody.appendChild(statusDiv); // Re-append status div
+                statusDiv.textContent = ''; // Clear old status
+                statusDiv.className = 'mt-3';
+            }
+
+
+            // Get the newly created form element
+            const modifyForm = document.getElementById("resolve-form-modify");
+
+            // IMPORTANT: Attach the submit event listener to the NEWLY CREATED form
+            if (modifyForm) {
+                modifyForm.addEventListener("submit", function(event) {
+                    event.preventDefault();
+                    // Use the *same* shared submit logic, targeting the status div within the card body
+                    handleResolveFormSubmit(modifyForm, "resolve-form-status-modify");
+                });
+            } else {
+                 console.error("Failed to find the newly created modify form to attach listener.");
+            }
+
+             // Optionally hide the "Modify Response" button itself now
+             buttonElement.style.display = 'none';
+        }
+
+    </script>
+     <!-- ****** END: Original Page JavaScript ****** -->
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+# Python / Django
+*.pyc
+*.pyo
+__pycache__/
+*.log
+*.pot
+*.mo
+
+# Virtual Environment
+venv/
+env/
+.venv/
+.env/
+*/activate
+*/Activate.ps1
+
+# Database
+db.sqlite3
+*.sql
+*.db
+
+# Static files collected by collectstatic (optional, but good practice)
+staticfiles/
+static_root/
+
+# Media files (user uploads)
+media/
+media_root/
+
+# IDE / Editor specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Secrets / Environment variables (IMPORTANT!)
+*.env
+.env.*
+secrets.py # Or any file where you might store sensitive keys
+
+# Build artifacts / Distribution
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Coverage reports
+.coverage
+htmlcov/

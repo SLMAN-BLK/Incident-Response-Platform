@@ -1,0 +1,364 @@
+{% load static %} {# Added for url tags #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incident Response Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    {# Removed duplicate jQuery include - only needed once, preferably before bootstrap.bundle.js #}
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    <style>
+        /* Your existing styles ... */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            padding-bottom: 20px;
+            /* Add padding-top if navbar becomes fixed */
+            /* padding-top: 70px; */ /* Adjust based on navbar height */
+        }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; vertical-align: middle; } /* Added vertical-align */
+        th { background-color: #f2f2f2; }
+        /* Removed td cursor pointer as links should handle clicks */
+        tr:hover { background-color: #f1f1f1;cursor: pointer; }
+        .status { padding: 5px 10px; border-radius: 5px; color: white; font-weight: bold; text-align: center; display: inline-block; min-width: 82px; min-height: 34px; vertical-align: middle; } /* Added vertical-align */
+        .progress { background-color: #28a745; } /* resolved */
+        .resolved { background-color: #28a745; }
+        .open { background-color: #ffc107; color: black; } /* pending */
+        .on-hold { background-color: #dc3545; } /* error */
+        /* Explicitly define status colors to match span classes */
+        .status.resolved { background-color: #28a745; }
+        .status.pending { background-color: #ffc107; color: black; }
+        .status.error { background-color: #dc3545; }
+
+        .filter-section { background-color: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .form-label { margin-bottom: 0.2rem; font-size: 0.85em; } /* Smaller labels */
+        #alerts-data td { vertical-align: middle; }
+        #loading-indicator { text-align: center; padding: 20px; display: none; } /* Added */
+        .pagination { margin-top: 20px; justify-content: center; } /* Added & Centered */
+        .navbar{
+            padding-top: 15px;
+            padding-bottom: 15px;
+
+        }
+        .navbar {
+            background-color: #2c3e50 ;
+        }
+    </style>
+    
+</head>
+<body>
+
+    <!-- ****** START: Navbar Added Here ****** -->
+    <nav class="navbar navbar-expand-lg navbar-dark " style="background-color: #2c3e50 ;"> {# Added mb-4 for spacing below navbar #}
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'index' %}">IR Platform</a> {# Added a Brand link #}
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavGlobal" aria-controls="navbarNavGlobal" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNavGlobal"> {# Changed ID slightly to avoid potential conflicts #}
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'index' %}">Dashboard</a></li>
+                    {# Add other common links as needed, ensure the url names exist #}
+                    <li class="nav-item"><a class="nav-link active" aria-current="page" href="{% url 'alerts_dashboard' %}">Incident Response</a></li> {# Added active state #}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'chat_page' %}">Chat With AI</a></li>
+
+                    {% if user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                           <span class="me-1">👤</span> {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
+                             {# Optional: Can add a non-clickable header #}
+                            <li><h6 class="dropdown-header">User Panel</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'profile' %}">Profile</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+                        </ul>
+                    </li>
+                    {% else %}
+                         {# Optional: Add Login/Register links if user is not logged in #}
+                         <!-- <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Login</a></li> -->
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <!-- ****** END: Navbar Added Here ****** -->
+
+
+    <!-- ****** START: Original Page Content ****** -->
+    <div class="container mt-4"> {# Consider removing mt-4 if mb-4 on navbar is enough space #}
+        <h1 class="mb-4 text-center">Incident Response Dashboard</h1>
+
+        <!-- Filters Section -->
+        <div class="filter-section">
+             <div class="row g-3 align-items-end">
+                <div class="col-md-3 col-lg-2"><label for="startTime" class="form-label">Start Time:</label><input type="datetime-local" id="startTime" class="form-control form-control-sm"></div>
+                <div class="col-md-3 col-lg-2"><label for="endTime" class="form-label">End Time:</label><input type="datetime-local" id="endTime" class="form-control form-control-sm"></div>
+                <div class="col-md-2 col-lg-2"><label for="timeFilter" class="form-label">Quick Filter:</label><select id="timeFilter" class="form-select form-select-sm"><option value="">All Time</option><option value="24h">Last 24h</option><option value="7d">Last 7d</option><option value="30d">Last 30d</option></select></div>
+                <div class="col-md-2 col-lg-1"><label for="statusFilter" class="form-label">Status:</label><select id="statusFilter" class="form-select form-select-sm"><option value="">All</option><option value="resolved">Resolved</option><option value="pending">Pending</option><option value="error">Error</option></select></div>
+                <div class="col-md-2 col-lg-2"><label for="severityFilter" class="form-label">Severity:</label><select id="severityFilter" class="form-select form-select-sm"><option value="">All</option><option value="Critical">Critical</option><option value="Medium">Medium</option><option value="Low">Low</option></select></div>
+                <div class="col-md-12 col-lg-3"><label for="searchText" class="form-label">Search:</label><input type="text" id="searchText" class="form-control form-control-sm" placeholder="Descrip/Source..."></div>
+            </div>
+             <div class="row mt-3">
+                <div class="col-md-12 text-center">
+                    <!-- Buttons now call specific JS functions -->
+                    <button class="btn btn-primary btn-sm me-2" onclick="applyFiltersAndRefresh()">Apply Filters</button>
+                    <button class="btn btn-secondary btn-sm" onclick="clearFiltersAndRefresh()">Clear All</button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Alerts Table -->
+        <table>
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Severity</th>
+                    <th>Source</th>
+                    <th>Alert Description</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="alerts-data">
+                <!-- Data rows injected here -->
+            </tbody>
+        </table>
+
+        <!-- Loading Indicator -->
+        <div id="loading-indicator">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+
+        <!-- Pagination Controls Placeholder -->
+        <nav aria-label="Alerts navigation"> {# Added nav wrapper for semantics #}
+            <ul id="pagination-controls" class="pagination justify-content-center mt-3"> {# Moved classes here #}
+                <!-- Pagination HTML injected here -->
+            </ul>
+        </nav>
+
+    </div>
+    <!-- ****** END: Original Page Content ****** -->
+
+
+    <!-- ****** START: Original Page JavaScript ****** -->
+    <!-- jQuery should be loaded before Bootstrap bundle -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS Bundle (includes Popper) - Added for Navbar functionality -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        var currentFetchRequest = null; // To track ongoing AJAX request
+        var refreshIntervalId = null;   // To manage the interval timer
+
+        // Fetch alerts data - Reads filters directly from inputs
+        function fetchAlerts(page = 1) { // Default to page 1 if not provided
+            // Abort previous request if it's still running
+            if (currentFetchRequest) {
+                currentFetchRequest.abort();
+                console.log('Previous fetch aborted.');
+            }
+
+            $('#loading-indicator').show();
+            $('#alerts-data').css('opacity', 0.5); // Dim table while loading
+
+            // Read filter values directly from the form elements
+            var startTime = $('#startTime').val();
+            var endTime = $('#endTime').val();
+            var timeFilter = $('#timeFilter').val();
+            var searchText = $('#searchText').val();
+            var statusFilter = $('#statusFilter').val();
+            var severityFilter = $('#severityFilter').val(); // Read directly from the dropdown
+
+            console.log("Fetching page:", page, " Filters:", {
+                start_time: startTime, end_time: endTime, time_filter: timeFilter,
+                search: searchText, status: statusFilter, severity: severityFilter
+            }); // Debugging
+
+            currentFetchRequest = $.ajax({
+                url: "{% url 'fetch_filtered_alerts_api' %}", // Ensure this URL name exists
+                method: 'GET',
+                data: {
+                    start_time: startTime,
+                    end_time: endTime,
+                    time_filter: timeFilter,
+                    search: searchText,
+                    status: statusFilter,
+                    severity: severityFilter, // Send the value read from the dropdown
+                    page: page // <-- Send the requested page number
+                },
+                dataType: 'json',
+                success: function(response) {
+                    $('#alerts-data').html(response.html_rows);
+                    $('#pagination-controls').html(response.pagination_html); // Target the <ul> now
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                     if (textStatus === 'abort') {
+                         console.log('Fetch request aborted');
+                         return; // Normal abort, do nothing further
+                     }
+                     console.error("Error fetching alerts:", textStatus, errorThrown, jqXHR.responseText);
+                     $('#alerts-data').html('<tr><td colspan="5" class="text-danger text-center">Error loading alerts. Please check console and try again.</td></tr>'); // Use classes
+                     $('#pagination-controls').html(''); // Clear pagination on error
+                },
+                complete: function() {
+                     $('#loading-indicator').hide();
+                     $('#alerts-data').css('opacity', 1); // Restore table opacity
+                     currentFetchRequest = null;
+                }
+            });
+        }
+
+        // Clear all filters, fetch page 1, and restart interval
+        function clearFiltersAndRefresh() {
+            console.log('Clearing filters and refreshing...');
+            $('#startTime').val('');
+            $('#endTime').val('');
+            $('#timeFilter').val('');
+            $('#searchText').val('');
+            $('#statusFilter').val('');
+            $('#severityFilter').val('');
+            fetchAlerts(1); // Fetch the first page with cleared filters
+            startRefreshInterval(); // Restart interval
+        }
+
+        // Apply filters, fetch page 1, and restart interval
+        function applyFiltersAndRefresh() {
+            console.log('Applying filters and refreshing...');
+            fetchAlerts(1); // Fetch page 1 with current filters
+            startRefreshInterval(); // Restart interval
+        }
+
+
+        // Function to start or restart the refresh interval
+        function startRefreshInterval(interval = 30000) { // Default to 30 seconds
+            // Clear existing interval if any
+            if (refreshIntervalId !== null) {
+                clearInterval(refreshIntervalId);
+                console.log("Cleared existing refresh interval (ID:", refreshIntervalId, ")");
+            }
+            // Start new interval
+            refreshIntervalId = setInterval(function() {
+                // Find current active page (if pagination exists)
+                let currentPageLink = $('#pagination-controls .page-item.active .page-link');
+                let currentPage = currentPageLink.length ? parseInt(currentPageLink.data('page')) : 1; // Get from data-page
+                if (isNaN(currentPage) || currentPage < 1) { currentPage = 1; } // Fallback if data-page is missing or invalid
+
+                console.log("Auto-refreshing page:", currentPage);
+                // Refetch the current page with current filters
+                fetchAlerts(currentPage);
+            }, interval);
+            console.log("Refresh interval started (ID:", refreshIntervalId, "Interval:", interval, "ms)");
+        }
+
+        // --- Document Ready ---
+        $(document).ready(function() {
+            console.log("Document ready.");
+            // 1. Read URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const severityFromUrl = urlParams.get("severity");
+            const statusFromUrl = urlParams.get("status"); // Add if needed for resolved link
+            const pageFromUrl = parseInt(urlParams.get("page")) || 1; // Default to 1
+
+            console.log("Page loaded. URL Params - Severity:", severityFromUrl, "Status:", statusFromUrl, "Page:", pageFromUrl);
+
+            // 2. Set initial filter values based on URL parameters *before* the first fetch
+            if (severityFromUrl) {
+                // Check if the value exists as an option before setting it
+                if ($("#severityFilter option[value='" + severityFromUrl + "']").length > 0) {
+                    $('#severityFilter').val(severityFromUrl);
+                    console.log("Set Severity dropdown to:", severityFromUrl);
+                } else {
+                    console.warn("Severity value from URL ('" + severityFromUrl + "') not found in dropdown options.");
+                }
+            }
+             if (statusFromUrl) { // Add if needed for resolved link
+                if ($("#statusFilter option[value='" + statusFromUrl + "']").length > 0) {
+                    $('#statusFilter').val(statusFromUrl);
+                     console.log("Set Status dropdown to:", statusFromUrl);
+                } else {
+                    console.warn("Status value from URL ('" + statusFromUrl + "') not found in dropdown options.");
+                }
+            }
+            // Add similar checks for other filters if you pass them via URL
+
+            // 3. Initial data load using the determined page and pre-set filters
+            fetchAlerts(pageFromUrl);
+
+            // 4. Set up interval refresh
+            startRefreshInterval(30000); // Refresh every 30 seconds
+
+            // 5. Event Listener for Pagination Clicks (using event delegation on the nav wrapper or container)
+             // Target the nav element holding the pagination for robustness
+            $('nav[aria-label="Alerts navigation"]').on('click', 'a.page-link', function(event) {
+                event.preventDefault(); // Prevent default link behavior
+
+                var page = $(this).data('page'); // Get page number from data-page attribute
+                var pageItem = $(this).closest('.page-item'); // Get the parent li
+
+                // Proceed only if it's a valid page number and the item is not disabled or already active
+                if (page && !pageItem.hasClass('disabled') && !pageItem.hasClass('active')) {
+                    console.log("Pagination link clicked for page:", page);
+                    fetchAlerts(page); // Fetch the clicked page
+                    // Optional: Restart interval on manual navigation if desired
+                    // startRefreshInterval();
+                } else {
+                    console.log("Pagination click ignored (disabled, active, or no page data).");
+                }
+            });
+
+            // 6. Enter key listener for search input
+            $('#searchText').on('keydown', function(event) {
+                if (event.key === "Enter") {
+                     event.preventDefault(); // Prevent potential form submission if inside one
+                     console.log("Enter key pressed in search field.");
+                     applyFiltersAndRefresh(); // Apply filters when Enter is pressed
+                 }
+            });
+
+            // 7. Click listener for table rows to navigate to details page
+            $('#alerts-data').on('click', 'tr', function() {
+                var alertId = $(this).data('alert-id'); // Assuming you add data-alert-id="123" to your <tr> in the backend
+                if (alertId) {
+                    // Construct the URL using Django's url tag resolution if possible, otherwise hardcode path
+                    // Method 1: Hardcoded path (simpler if URL is stable)
+                    // window.location.href = '/alert/details/' + alertId + '/';
+
+                    // Method 2: Django URL tag (Requires passing the base URL structure to JS or resolving elsewhere)
+                    // This example assumes you have a JS variable `alertDetailsUrlBase` like '/alert/details/'
+                    // var url = alertDetailsUrlBase + alertId + '/';
+                    // window.location.href = url;
+
+                    // Fallback if url tag is complex to implement in JS:
+                     console.log("Row clicked for alert ID:", alertId);
+                     window.location.href = `/alert/details/${alertId}/`; // Use template literal for cleaner path construction
+
+                } else {
+                    console.warn("Clicked row does not have a data-alert-id attribute.");
+                }
+            });
+
+        });
+        // Note: The clearFilters function is defined outside $(document).ready()
+        // It is called by the "Clear All" button's onclick attribute.
+        function clearFilters() {
+            document.getElementById("startTime").value = "";
+            document.getElementById("endTime").value = "";
+            document.getElementById("timeFilter").value = "";
+            document.getElementById("statusFilter").value = "";
+            document.getElementById("severityFilter").value = "";
+            document.getElementById("searchText").value = "";
+            // No need to call fetchAlerts here, use clearFiltersAndRefresh for button click
+        }
+
+        // Note: Removed the global keydown listener as it's now specific to the search input
+    </script>
+    <!-- ****** END: Original Page JavaScript ****** -->
+
+</body>
+</html>
