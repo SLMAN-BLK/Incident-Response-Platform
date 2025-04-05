@@ -212,9 +212,11 @@ db_password_encoded = quote_plus(db_password_raw)
 # Configure your Gemini API key
 genai.configure(api_key=os.getenv("GEMINI_API_KEY")) # Replace with your actual API key
 
-model_name = 'models/gemma-3-27b-it' # or 'models/gemini-1.5-flash', or 'models/gemini-1.5-flash-8b', or a gemini 2.0 model.
+model_name = 'models/gemini-2.5-pro-exp-03-25' # or 'models/gemini-1.5-flash', or 'models/gemini-1.5-flash-8b', or a gemini 2.0 model.
 
+"""(venv) root@khali:/home/khali# python3 model-test.py Model Name: models/chat-bison-001 Model Name: models/text-bison-001 Model Name: models/embedding-gecko-001 Model Name: models/gemini-1.0-pro-vision-latest Model Name: models/gemini-pro-vision Model Name: models/gemini-1.5-pro-latest Model Name: models/gemini-1.5-pro-001 Model Name: models/gemini-1.5-pro-002 Model Name: models/gemini-1.5-pro Model Name: models/gemini-1.5-flash-latest Model Name: models/gemini-1.5-flash-001 Model Name: models/gemini-1.5-flash-001-tuning Model Name: models/gemini-1.5-flash Model Name: models/gemini-1.5-flash-002 Model Name: models/gemini-1.5-flash-8b Model Name: models/gemini-1.5-flash-8b-001 Model Name: models/gemini-1.5-flash-8b-latest Model Name: models/gemini-1.5-flash-8b-exp-0827 Model Name: models/gemini-1.5-flash-8b-exp-0924 Model Name: models/gemini-2.5-pro-exp-03-25 Model Name: models/gemini-2.5-pro-preview-03-25 Model Name: models/gemini-2.0-flash-exp Model Name: models/gemini-2.0-flash Model Name: models/gemini-2.0-flash-001 Model Name: models/gemini-2.0-flash-exp-image-generation Model Name: models/gemini-2.0-flash-lite-001 Model Name: models/gemini-2.0-flash-lite Model Name: models/gemini-2.0-flash-lite-preview-02-05 Model Name: models/gemini-2.0-flash-lite-preview Model Name: models/gemini-2.0-pro-exp Model Name: models/gemini-2.0-pro-exp-02-05 Model Name: models/gemini-exp-1206 Model Name: models/gemini-2.0-flash-thinking-exp-01-21 Model Name: models/gemini-2.0-flash-thinking-exp Model Name: models/gemini-2.0-flash-thinking-exp-1219 Model Name: models/learnlm-1.5-pro-experimental Model Name: models/gemma-3-1b-it Model Name: models/gemma-3-4b-it Model Name: models/gemma-3-12b-it Model Name: models/gemma-3-27b-it Model Name: models/embedding-001 Model Name: models/text-embedding-004 Model Name: models/gemini-embedding-exp-03-07 Model Name: models/gemini-embedding-exp Model Name: models/aqa Model Name: models/imagen-3.0-generate-002""" 
 model = genai.GenerativeModel(model_name)
+
 
 
 # URL-encode the password
@@ -225,7 +227,7 @@ connection_string = f"mysql+pymysql://{db_user}:{db_password_encoded}@{db_host}/
 
 # Create the engine
 engine = create_engine(connection_string)
-#engine = create_engine("mysql+pymysql://manager:P@$$w0rd@192.168.2.60/test2")
+
 
 
 def chatbot(request):
@@ -244,6 +246,8 @@ def chatbot(request):
         status (VARCHAR(25), NOT NULL)
         full_alert (LONGTEXT, NOT NULL)
         full_response (LONGTEXT, NOT NULL)
+        response_desc (LONGTEXT, NOT NULL)
+        responder (LONGTEXT, NOT NULL)
     """
 
     prompt = f"""
@@ -376,10 +380,59 @@ def incident(request):
             status=a.status
             response_desc=a.response_desc
             responder_name=a.responder
-
-   
+            """
+    if extract_public_ips(full_alert) : 
+        checkipdb(extract_public_ips(full_alert))
+        """
     return render(request, "incident.html",{'id':id,'falert':full_alert,'frepp':full_response,'status':status,'response_desc': response_desc,'responder_name':responder_name})
 
+
+#***************************************  IP EXTRACTOR  *****************************************************************
+"""
+import re
+import ipaddress
+
+def extract_public_ips(text):
+    ip_candidates = re.findall(r'\b(?:\d{1,3}\.){3}\d{1,3}\b', text)
+    public_ips = []
+
+    for ip in ip_candidates:
+        try:
+            ip_obj = ipaddress.ip_address(ip)
+            if not ip_obj.is_private:
+                public_ips.append(ip)
+        except ValueError:
+            continue  # skip invalid IPs
+    return public_ips
+
+
+#*******************************************   Abuse IPDB  *******************************************************
+import requests
+def checkipdb(theip):
+    url = "https://api.abuseipdb.com/api/v2/check"
+
+    querystring = {
+        "ipAddress": theip[0],
+        "maxAgeInDays": "90"
+    }
+
+    headers = {
+        "Accept": "application/json",
+        "Key": "e54da243eb711adbd5b8c8b315ad979d2e34fd933e5275863dac542fe9b554fed7af8104eb485bdc"
+    }
+
+    response = requests.get(url, headers=headers, params=querystring)
+
+    print("Status Code:", response.status_code)
+
+    if response.status_code == 200:
+        data = response.json()
+        print(data)
+    else:
+        print("error")
+        print(response.text)
+
+"""
 
 
 import requests
