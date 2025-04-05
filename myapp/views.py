@@ -244,6 +244,8 @@ def chatbot(request):
         status (VARCHAR(25), NOT NULL)
         full_alert (LONGTEXT, NOT NULL)
         full_response (LONGTEXT, NOT NULL)
+        response_desc (LONGTEXT, NOT NULL)
+        responder (LONGTEXT, NOT NULL)
     """
 
     prompt = f"""
