@@ -64,6 +64,7 @@ pip install mysqlclient
 pip install pymysql
 python manage.py migrate
 pip install python-dotenv
+pip install google-generativeai
 ```
 
 ---
