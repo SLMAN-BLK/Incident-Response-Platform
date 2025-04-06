@@ -77,14 +77,14 @@ from dotenv import load_dotenv
 from urllib.parse import quote_plus
 import os
 
-db_password_raw = os.getenv("DB_PASSWORD")
+# on lunix we ADD this : load_dotenv()
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.getenv("DB_NAME"),
         'USER': os.getenv("DB_USER"),
-        'PASSWORD': db_password_raw,
+        'PASSWORD': os.getenv("DB_PASSWORD"),
         'HOST': '@IP-where-is-mysql-db',
         'PORT': '3306',
     }
