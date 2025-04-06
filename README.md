@@ -65,6 +65,7 @@ pip install pymysql
 python manage.py migrate
 pip install python-dotenv
 pip install google-generativeai
+pip install SQLAlchemy
 ```
 
 ---
