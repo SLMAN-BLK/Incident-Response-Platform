@@ -59,6 +59,7 @@ source venv/bin/activate
 ```sh
 pip install django
 pip install cryptography
+only on  lunix : sudo apt install build-essential pkg-config python3-dev default-libmysqlclient-dev
 pip install mysqlclient
 pip install pymysql
 python manage.py migrate
