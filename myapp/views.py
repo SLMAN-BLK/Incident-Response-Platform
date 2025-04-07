@@ -20,6 +20,11 @@ from sqlalchemy import create_engine, text
 @login_required(login_url='login')
 def index(request):
     alerts = Alert.objects.all()
+    
+    #********************************************************************************************** 24 heurs only ************************************************************************************************
+    now = timezone.now()
+
+    alerts = alerts.filter(time__gte=now - timedelta(days=1))
 
     # Count alerts by severity and status
     critical = alerts.filter(severity='Critical').count()
