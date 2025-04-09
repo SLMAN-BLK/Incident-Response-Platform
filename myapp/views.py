@@ -371,6 +371,7 @@ def profile(request):
 
 
 
+#********************************************************************** Incident  *************************************************************************************
 
 @login_required(login_url='login')
 def incident(request):
@@ -385,11 +386,13 @@ def incident(request):
             status=a.status
             response_desc=a.response_desc
             responder_name=a.responder
+            time=a.time
             """
     if extract_public_ips(full_alert) : 
         checkipdb(extract_public_ips(full_alert))
         """
-    return render(request, "incident.html",{'id':id,'falert':full_alert,'frepp':full_response,'status':status,'response_desc': response_desc,'responder_name':responder_name})
+    return render(request, "incident.html",{'id':id,'time':time,'falert':full_alert,'frepp':full_response,'status':status,'response_desc': response_desc,'responder_name':responder_name})
+
 
 
 #***************************************  IP EXTRACTOR  *****************************************************************
