@@ -1,0 +1,7 @@
+django
+cryptography
+mysqlclient
+pymysql
+python-dotenv
+google-generativeai
+SQLAlchemy
