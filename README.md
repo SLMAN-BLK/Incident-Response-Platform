@@ -1,134 +1,167 @@
+
 # Incident-Response-Platform
 
-## Project Overview
-The **Incident-Response-Platform** is a cybersecurity tool designed to handle security alerts efficiently. It consists of three main components:
+## 🚨 Project Overview
 
-1. **Django Web Application** – The main frontend and backend interface for managing incidents.
-2. **Webhook** – Receives alerts from Wazuh and processes them.
-3. **Database** – Stores alerts and incident responses for further analysis.
+The **Incident-Response-Platform** is a cybersecurity tool designed to manage and respond to security alerts effectively. It consists of:
 
-## Installation and Setup Guide
+- **Django Web Application** – Frontend and backend for managing incidents.
+- **Webhook** – Receives and processes alerts from Wazuh.
+- **Database** – Stores alerts and incident response data for analysis.
 
-### 1. Install MySQL on a Linux Virtual Machine
+---
+
+## ⚙️ Installation and Setup Guide
+
+### 1. Install MySQL on Linux
 
 **Connect to MySQL:**
-```sh
+```bash
 mysql -u root
 ```
 
-**Create a MySQL User:**
+**Create a User:**
 ```sql
 CREATE USER 'username'@'allowed_ip_address' IDENTIFIED BY 'YourVerySecretPassword';
 ```
-> **Note:** Use `%` as a wildcard to allow connections from any IP address.
+
+> Use `%` as `allowed_ip_address` to allow access from any IP.
 
 **Grant Privileges:**
 ```sql
 GRANT ALL PRIVILEGES ON your_database_name.* TO 'username'@'allowed_ip_address';
-```
-
-**Apply Privileges:**
-```sql
 FLUSH PRIVILEGES;
 ```
 
 ---
 
-### 2. Clone the Git Repository
-```sh
+### 2. Clone the Repository
+
+```bash
 git clone [REPOSITORY_URL]
+cd Incident-Response-Platform
 ```
 
 ---
 
 ### 3. Create a Virtual Environment
+
 #### On Windows:
-```sh
+```bash
 python3 -m venv venv
-venv\Scripts\Activate
+venv\Scripts\activate
 ```
+
 #### On Linux:
-```sh
+```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
 ---
 
-### 4. Install Dependencies
-```sh
-pip install django
-pip install cryptography
-only on  lunix : sudo apt install build-essential pkg-config python3-dev default-libmysqlclient-dev
-pip install mysqlclient
-pip install pymysql
-python manage.py migrate
-pip install python-dotenv
-pip install google-generativeai
-pip install SQLAlchemy
+### 4. Install System Packages (Linux only)
+
+```bash
+sudo apt update
+sudo apt install build-essential pkg-config python3-dev default-libmysqlclient-dev
 ```
 
 ---
 
-### 5. (Optional) Install AI Features
-If you wish to use AI-based features, install **Ollama** and download the Mistral model.
+### 5. Install Python Dependencies
 
-**Download Ollama:** [Ollama Website](https://ollama.ai)
-
-**Download Mistral 7B Model:**
-```sh
-ollama serve
+```bash
+pip install -r requirements.txt
 ```
 
 ---
 
 ### 6. Configure the Database
-Modify the database settings in the project’s configuration file to match your MySQL setup.
+
+Edit `settings.py` in your Django project and set the MySQL database connection info:
+
+```python
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'your_database_name',
+        'USER': 'username',
+        'PASSWORD': 'YourVerySecretPassword',
+        'HOST': 'localhost',  # or the IP address
+        'PORT': '3306',
+    }
+}
+```
 
 ---
 
 ### 7. Run Database Migrations
-```sh
+
+```bash
 python manage.py migrate
 ```
 
 ---
 
-### 8. Start the Application
-```sh
+### 8. (Optional) Enable AI Features
+
+To use chatbot/AI features, install **Ollama** and serve the **Mistral 7B** model.
+
+- [Download Ollama](https://ollama.ai)
+- Start the model:
+
+```bash
+ollama serve
+```
+
+---
+
+### 9. Start the Application
+
+```bash
 python manage.py runserver
 ```
 
 ---
 
-### 9. Create a Super Admin
-Use the registration feature to create an admin account.
+### 10. Create a Superuser
+
+```bash
+python manage.py createsuperuser
+```
+
+Follow the prompts to set up an admin account.
 
 ---
 
-### 10. Manage Users
-Allow users to register and access the platform.
+### 11. User Management
+
+- Use the registration page to allow users to create accounts.
+- Superusers can manage users and incidents from the Django admin panel.
 
 ---
 
-## Project Screenshots
+## 🖼️ Screenshots
 
-Here are the main interface screens of the project:
+| Login | Register | Dashboard |
+|-------|----------|-----------|
+| ![Login](images/cap1_login.png) | ![Register](images/cap2_register.png) | ![Dashboard](images/cap3_Dashboard.png) |
 
-![Login](images/cap1_login.png)
-![Register](images/cap2_register.png)
-![Dashboard](images/cap3_Dashboard.png)
-![Incident Response](images/cap4_incident_Response.png)
-![Case Management](images/cap5_case.png)
-![Chatbot](images/cap6_chatbot.png)
-
----
-
-## Contributions
-Feel free to submit pull requests or open issues for suggestions and improvements!
+| Incident Response | Case Management | Chatbot |
+|-------------------|------------------|---------|
+| ![Incident Response](images/cap4_incident_Response.png) | ![Case](images/cap5_case.png) | ![Chatbot](images/cap6_chatbot.png) |
 
 ---
 
-## License
-This project is licensed under USTHB .
+## 🤝 Contributions
 
+Contributions are welcome! Feel free to submit a pull request or open an issue with suggestions and improvements.
+
+---
+
+## 📄 License
+
+This project is licensed under the USTHB.
+
+---
