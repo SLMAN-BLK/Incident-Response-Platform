@@ -206,93 +206,193 @@ import os
 
 load_dotenv()
 
+# --- Database Configuration ---
 db_user = os.getenv("DB_USER")
 db_password_raw = os.getenv("DB_PASSWORD")
 db_host = os.getenv("DB_HOST")
 db_name = os.getenv("DB_NAME")
-api_key = os.getenv("GEMINI_API_KEY")
-
 db_password_encoded = quote_plus(db_password_raw)
-
-# Configure your Gemini API key
-genai.configure(api_key=os.getenv("GEMINI_API_KEY")) # Replace with your actual API key
-
-model_name = 'models/gemini-2.5-pro-exp-03-25' # or 'models/gemini-1.5-flash', or 'models/gemini-1.5-flash-8b', or a gemini 2.0 model models/gemini-1.5-pro-latest models/gemini-1.5-flash-latest.
-
-""" models/gemini-2.5-pro-exp-03-25 Model Name: models/chat-bison-001 Model Name: models/text-bison-001 Model Name: models/embedding-gecko-001 Model Name: models/gemini-1.0-pro-vision-latest Model Name: models/gemini-pro-vision Model Name: models/gemini-1.5-pro-latest Model Name: models/gemini-1.5-pro-001 Model Name: models/gemini-1.5-pro-002 Model Name: models/gemini-1.5-pro Model Name: models/gemini-1.5-flash-latest Model Name: models/gemini-1.5-flash-001 Model Name: models/gemini-1.5-flash-001-tuning Model Name: models/gemini-1.5-flash Model Name: models/gemini-1.5-flash-002 Model Name: models/gemini-1.5-flash-8b Model Name: models/gemini-1.5-flash-8b-001 Model Name: models/gemini-1.5-flash-8b-latest Model Name: models/gemini-1.5-flash-8b-exp-0827 Model Name: models/gemini-1.5-flash-8b-exp-0924 Model Name: models/gemini-2.5-pro-exp-03-25 Model Name: models/gemini-2.5-pro-preview-03-25 Model Name: models/gemini-2.0-flash-exp Model Name: models/gemini-2.0-flash Model Name: models/gemini-2.0-flash-001 Model Name: models/gemini-2.0-flash-exp-image-generation Model Name: models/gemini-2.0-flash-lite-001 Model Name: models/gemini-2.0-flash-lite Model Name: models/gemini-2.0-flash-lite-preview-02-05 Model Name: models/gemini-2.0-flash-lite-preview Model Name: models/gemini-2.0-pro-exp Model Name: models/gemini-2.0-pro-exp-02-05 Model Name: models/gemini-exp-1206 Model Name: models/gemini-2.0-flash-thinking-exp-01-21 Model Name: models/gemini-2.0-flash-thinking-exp Model Name: models/gemini-2.0-flash-thinking-exp-1219 Model Name: models/learnlm-1.5-pro-experimental Model Name: models/gemma-3-1b-it Model Name: models/gemma-3-4b-it Model Name: models/gemma-3-12b-it Model Name: models/gemma-3-27b-it Model Name: models/embedding-001 Model Name: models/text-embedding-004 Model Name: models/gemini-embedding-exp-03-07 Model Name: models/gemini-embedding-exp Model Name: models/aqa Model Name: models/imagen-3.0-generate-002 """ 
-model = genai.GenerativeModel(model_name)
-
-
-
-# URL-encode the password
-db_password_encoded = quote_plus(db_password_raw)
-
-# Construct the connection string with the encoded password
 connection_string = f"mysql+pymysql://{db_user}:{db_password_encoded}@{db_host}/{db_name}"
+try:
+    engine = create_engine(connection_string)
+    with engine.connect() as connection:
+        print("Database connection successful.")
+except Exception as e:
+    print(f"Error connecting to database: {e}")
+    engine = None
 
-# Create the engine
-engine = create_engine(connection_string)
-
-
-
-def chatbot(request):
-    query = request.GET.get("query", "").lower()
-
-    table_structure = """
-    Table: alert
-        Columns:
-        alert_id (INT, AUTO_INCREMENT, PRIMARY KEY)
-        time (DATETIME(6), NOT NULL)
-        source (VARCHAR(50), NOT NULL)
-        severity (VARCHAR(8), NOT NULL)
-        computer (VARCHAR(255), NOT NULL)
-        account_name (VARCHAR(255), NULLABLE)
-        description (LONGTEXT, NOT NULL)
-        status (VARCHAR(25), NOT NULL)
-        full_alert (LONGTEXT, NOT NULL)
-        full_response (LONGTEXT, NOT NULL)
-        response_desc (LONGTEXT, NOT NULL)
-        responder (LONGTEXT, NOT NULL)
-    """
-
-    prompt = f"""
-    {table_structure}
-    Convert this natural language question into a MySQL query for the 'alert' table, considering the table structure above: {query}.
-    Only return the SQL query without explanation. If the question does not require a SQL query, return 'NON_SQL'
-    """
-    
+# --- Gemini Configuration ---
+api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
+    print("Error: GEMINI_API_KEY not found.")
+    model = None
+else:
     try:
-        response = model.generate_content(prompt)
-        sql_query = response.text.strip()
-        sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
+        genai.configure(api_key=api_key)
+        model_name = 'models/gemini-1.5-flash-latest' # Or your preferred model   models/gemini-1.5-pro-latest 
+        # models/gemini-2.5-pro-exp-03-25 Model Name: models/chat-bison-001 Model Name: models/text-bison-001 Model Name: models/embedding-gecko-001 Model Name: models/gemini-1.0-pro-vision-latest Model Name: models/gemini-pro-vision Model Name: models/gemini-1.5-pro-latest Model Name: models/gemini-1.5-pro-001 Model Name: models/gemini-1.5-pro-002 Model Name: models/gemini-1.5-pro Model Name: models/gemini-1.5-flash-latest Model Name: models/gemini-1.5-flash-001 Model Name: models/gemini-1.5-flash-001-tuning Model Name: models/gemini-1.5-flash Model Name: models/gemini-1.5-flash-002 Model Name: models/gemini-1.5-flash-8b Model Name: models/gemini-1.5-flash-8b-001 Model Name: models/gemini-1.5-flash-8b-latest Model Name: models/gemini-1.5-flash-8b-exp-0827 Model Name: models/gemini-1.5-flash-8b-exp-0924 Model Name: models/gemini-2.5-pro-exp-03-25 Model Name: models/gemini-2.5-pro-preview-03-25 Model Name: models/gemini-2.0-flash-exp Model Name: models/gemini-2.0-flash Model Name: models/gemini-2.0-flash-001 Model Name: models/gemini-2.0-flash-exp-image-generation Model Name: models/gemini-2.0-flash-lite-001 Model Name: models/gemini-2.0-flash-lite Model Name: models/gemini-2.0-flash-lite-preview-02-05 Model Name: models/gemini-2.0-flash-lite-preview Model Name: models/gemini-2.0-pro-exp Model Name: models/gemini-2.0-pro-exp-02-05 Model Name: models/gemini-exp-1206 Model Name: models/gemini-2.0-flash-thinking-exp-01-21 Model Name: models/gemini-2.0-flash-thinking-exp Model Name: models/gemini-2.0-flash-thinking-exp-1219 Model Name: models/learnlm-1.5-pro-experimental Model Name: models/gemma-3-1b-it Model Name: models/gemma-3-4b-it Model Name: models/gemma-3-12b-it Model Name: models/gemma-3-27b-it Model Name: models/embedding-001 Model Name: models/text-embedding-004 Model Name: models/gemini-embedding-exp-03-07 Model Name: models/gemini-embedding-exp Model Name: models/aqa Model Name: models/imagen-3.0-generate-002
+        model = genai.GenerativeModel(model_name)
+        print(f"Gemini model '{model_name}' configured successfully.")
+    except Exception as e:
+        print(f"Error configuring Gemini: {e}")
+        model = None
 
-        if sql_query.upper() != "NON_SQL":
-            if "SELECT" in sql_query.upper():
+# --- Table Structure ---
+TABLE_STRUCTURE = """
+Table: alert
+Description: This table stores information about system alerts and their responses.
+Columns:
+    alert_id (INT, AUTO_INCREMENT, PRIMARY KEY): Unique identifier for each alert.
+    time (DATETIME(6), NOT NULL): Timestamp of the alert.
+    source (VARCHAR(50), NOT NULL): Origin of the alert.
+    severity (VARCHAR(8), NOT NULL): Severity level of the alert. Possible values: 'critical', 'medium', 'low'.
+    computer (VARCHAR(255), NOT NULL): Name of the computer where the alert was generated.
+    account_name (VARCHAR(255), NULLABLE): Username associated with the alert (if any).
+    description (LONGTEXT, NOT NULL): Description of the alert.
+    status (VARCHAR(25), NOT NULL): Current status of the alert. Possible values: 'resolved', 'pending'.
+    full_alert (LONGTEXT, NOT NULL): Full details of the alert.
+    full_response (LONGTEXT, NOT NULL): Full response given to the alert.
+    response_desc (LONGTEXT, NOT NULL): Summary description of the response.
+    responder (LONGTEXT, NOT NULL): Entity or person who responded to the alert.
+""" # Simplified for brevity in prompt, expand if needed by Gemini
+
+# --- Chatbot View ---
+def chatbot(request):
+    if not engine:
+        return JsonResponse({"response": "Database connection error."}, status=500)
+    if not model:
+         return JsonResponse({"response": "Chatbot model not configured."}, status=500)
+
+    query = request.GET.get("query", "").strip()
+    if not query:
+        return JsonResponse({"response": "Please provide a query."}, status=400)
+
+    # --- History Management ---
+    # Load history (guaranteed to be serializable list of dicts from previous runs)
+    chat_history = request.session.get('chat_history', [])
+    # Make a mutable copy if needed (lists loaded from session are usually mutable)
+    current_turn_history = list(chat_history) # Use this local var to append during this request
+
+    # --- SQL Generation Check ---
+    sql_check_prompt = f"""
+        {TABLE_STRUCTURE}
+        Analyze the user question: "{query}"
+        Does it require a SQL query for the 'alert' table?
+        Examples requiring SQL: "Show me critical alerts", "Count pending alerts".
+        Examples NOT requiring SQL: "Hello", "Explain the previous alert", "Summarize our chat".
+        Respond ONLY with the generated MySQL query enclosed in ```sql ... ``` if applicable, or the exact text 'NON_SQL' otherwise.
+
+        User Question: "{query}"
+        Your Response:
+    """
+
+    bot_response_content = "Sorry, I encountered an issue processing your request." # Default error
+
+    try:
+        # Use generate_content for the specific SQL check task (no history needed here)
+        sql_check_response = model.generate_content(sql_check_prompt)
+        sql_check_result = sql_check_response.text.strip()
+
+        sql_query = None
+        if sql_check_result.startswith("```sql"):
+            sql_query = sql_check_result.replace("```sql", "").replace("```", "").strip()
+            print(f"Generated SQL Query: {sql_query}") # Debugging
+        elif "NON_SQL" not in sql_check_result.upper():
+             print(f"Warning: Unexpected response from SQL check: {sql_check_result}")
+             sql_query = None # Treat unexpected as NON_SQL
+
+        # --- Processing Based on SQL Check ---
+        if sql_query and "SELECT" in sql_query.upper():
+            try:
+                with engine.connect() as connection:
+                    result = connection.execute(text(sql_query))
+                    rows = result.fetchall()
+
+                    if rows:
+                        formatted_rows = [str(tuple(row)) for row in rows]
+                        response_text = "\n".join(formatted_rows)
+                        if len(rows) > 1:
+                             try:
+                                headers = ", ".join(result.keys())
+                                response_text = f"Results ({headers}):\n{response_text}"
+                             except Exception:
+                                response_text = f"Found {len(rows)} results:\n{response_text}"
+                        elif len(rows) == 1 and len(rows[0]) == 1:
+                            response_text = str(rows[0][0])
+                        # else: remains single row multi-column formatted string
+                        bot_response_content = response_text
+                    else:
+                        bot_response_content = "No matching records found."
+
+                # Append interaction to our LOCAL history list using the simple format
+                current_turn_history.append({'role': 'user', 'parts': [query]})
+                current_turn_history.append({'role': 'model', 'parts': [bot_response_content]})
+
+            except Exception as e:
+                print(f"SQL Execution Error: {e}")
+                error_message = f"Sorry, error running SQL query: {str(e)}. Query was: `{sql_query}`"
+                bot_response_content = error_message
+                # Append interaction (with error) to LOCAL history
+                current_turn_history.append({'role': 'user', 'parts': [query]})
+                current_turn_history.append({'role': 'model', 'parts': [bot_response_content]})
+
+        # --- Handle NON_SQL or non-SELECT queries using Chat History ---
+        else:
+            if sql_query: # Generated non-SELECT SQL
+                non_select_message = "I can only execute SELECT queries. Please ask generally for other requests."
+                bot_response_content = non_select_message
+                # Append interaction to LOCAL history
+                current_turn_history.append({'role': 'user', 'parts': [query]})
+                current_turn_history.append({'role': 'model', 'parts': [bot_response_content]})
+            else: # NON_SQL path - use chat session
                 try:
-                    with engine.connect() as connection:
-                        result = connection.execute(text(sql_query))
-                        rows = result.fetchall()
-                        if len(rows) == 1 and len(rows[0]) == 1:
-                            return JsonResponse({"response": str(rows[0][0])})
-                        elif len(rows) >= 0:
-                            formatted_rows = [str(row) for row in rows]
-                            return JsonResponse({"response": ", ".join(formatted_rows)})
-                        else :
-                            return JsonResponse({"response": "No Results"})
+                    # Start chat WITH the existing serializable history
+                    # Note: Pass the original chat_history loaded from session
+                    chat_session = model.start_chat(history=chat_history) # <-- Use history from session
+
+                    # Send the user's query
+                    gemini_response = chat_session.send_message(query)
+                    bot_response_text = gemini_response.text # Get the response text
+
+                    bot_response_content = bot_response_text
+
+                    # IMPORTANT FIX: Append user query and bot response text
+                    # to our LOCAL history list using the simple format.
+                    # DO NOT assign chat_session.history directly.
+                    current_turn_history.append({'role': 'user', 'parts': [query]})
+                    current_turn_history.append({'role': 'model', 'parts': [bot_response_content]}) # Use the extracted text
 
                 except Exception as e:
-                    return JsonResponse({"response": f"SQL Error: {str(e)}"})
-            else:
-                return JsonResponse({"response": "Invalid SQL Query"})
-        else:
-            gemini_prompt = f"You are a cybersecurity assistant. Answer this: {query}"
-            gemini_response = model.generate_content(gemini_prompt)
-            return JsonResponse({"response": gemini_response.text})
+                    print(f"Gemini Chat Error: {e}")
+                    error_message = f"Sorry, error communicating with AI: {str(e)}"
+                    bot_response_content = error_message
+                    # Append interaction (with error) to LOCAL history
+                    current_turn_history.append({'role': 'user', 'parts': [query]})
+                    current_turn_history.append({'role': 'model', 'parts': [bot_response_content]})
 
     except Exception as e:
-        return JsonResponse({"response": f"Gemini Error: {str(e)}"})
+        # Catch errors during the initial SQL check generation
+        print(f"Gemini SQL Check Error: {e}")
+        error_message = f"Sorry, error analyzing query: {str(e)}"
+        bot_response_content = error_message
+        # Append interaction (with error) to LOCAL history
+        current_turn_history.append({'role': 'user', 'parts': [query]})
+        current_turn_history.append({'role': 'model', 'parts': [bot_response_content]})
 
+    # --- Save Updated Serializable History ---
+    # Prune history if needed
+    MAX_HISTORY_TURNS = 15 # Keep last 15 pairs
+    if len(current_turn_history) > MAX_HISTORY_TURNS * 2:
+        # Keep the latest turns
+        start_index = len(current_turn_history) - (MAX_HISTORY_TURNS * 2)
+        current_turn_history = current_turn_history[start_index:]
 
+    # Save the updated list (which only contains serializable dicts) back to session
+    request.session['chat_history'] = current_turn_history
+    request.session.modified = True # Ensure Django saves the session
+
+    # --- Return Response ---
+    return JsonResponse({"response": bot_response_content})
 
 @login_required(login_url='login')    
 def chat_page(request):
