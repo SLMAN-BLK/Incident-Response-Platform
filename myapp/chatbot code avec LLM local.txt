@@ -1,0 +1,230 @@
+
+load_dotenv()
+
+# --- Database Configuration ---
+db_user = os.getenv("DB_USER")
+db_password_raw = os.getenv("DB_PASSWORD")
+db_host = os.getenv("DB_HOST")
+db_name = os.getenv("DB_NAME")
+db_password_encoded = quote_plus(db_password_raw)
+connection_string = f"mysql+pymysql://{db_user}:{db_password_encoded}@{db_host}/{db_name}"
+try:
+    engine = create_engine(connection_string)
+    with engine.connect() as connection:
+        print("Database connection successful.")
+except Exception as e:
+    print(f"Error connecting to database: {e}")
+    engine = None
+
+# --- Ollama Configuration ---
+# Use environment variables or hardcode (env vars preferred)
+OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "http://192.168.1.11:11434/api/chat")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "mistral")
+print(f"Using Ollama API: {OLLAMA_API_URL} with model: {OLLAMA_MODEL}")
+
+# --- Table Structure ---
+TABLE_STRUCTURE = """
+Table: alert
+Description: This table stores information about system alerts and their responses.
+Columns:
+    alert_id (INT, AUTO_INCREMENT, PRIMARY KEY): Unique identifier for each alert.
+    time (DATETIME(6), NOT NULL): Timestamp of the alert.
+    source (VARCHAR(50), NOT NULL): Origin of the alert.
+    severity (VARCHAR(8), NOT NULL): Severity level of the alert. Possible values: 'critical', 'medium', 'low'.
+    computer (VARCHAR(255), NOT NULL): Name of the computer where the alert was generated.
+    account_name (VARCHAR(255), NULLABLE): Username associated with the alert (if any).
+    description (LONGTEXT, NOT NULL): Description of the alert.
+    status (VARCHAR(25), NOT NULL): Current status of the alert. Possible values: 'resolved', 'pending'.
+    full_alert (LONGTEXT, NOT NULL): Full details of the alert.
+    full_response (LONGTEXT, NOT NULL): Full response given to the alert.
+    response_desc (LONGTEXT, NOT NULL): Summary description of the response.
+    responder (LONGTEXT, NOT NULL): Entity or person who responded to the alert."""
+
+# --- Helper Function to Convert History Format ---
+def convert_history_to_ollama(history_list):
+    """Converts internal history format to Ollama's message format."""
+    ollama_messages = []
+    for item in history_list:
+        role = item.get('role')
+        content = item.get('parts', [""])[0] # Get first part as content
+        if role == 'user':
+            ollama_messages.append({'role': 'user', 'content': content})
+        elif role == 'model':
+            ollama_messages.append({'role': 'assistant', 'content': content})
+        # Ignore other roles if any
+    return ollama_messages
+
+# --- Chatbot View ---
+def chatbot(request):
+    if not engine:
+        return JsonResponse({"response": "Database connection error."}, status=500)
+
+    query = request.GET.get("query", "").strip()
+    if not query:
+        return JsonResponse({"response": "Please provide a query."}, status=400)
+
+    # --- History Management ---
+    chat_history = request.session.get('chat_history', [])
+    current_turn_history = list(chat_history) # Local mutable copy for this request
+
+    bot_response_content = "Sorry, I encountered an issue processing your request." # Default error
+
+    # --- SQL Generation Check (using Ollama) ---
+    sql_check_prompt_text = f"""
+        {TABLE_STRUCTURE}
+        Analyze the following user question strictly based on the table structure provided.
+        Does the question *specifically* ask for data retrieval (like searching, counting, listing) from the 'alert' table?
+        Examples requiring SQL: "Show me critical alerts", "Count pending alerts for computer X", "What's the description for alert 5?".
+        Examples NOT requiring SQL: "Hello", "Explain alerts", "Summarize our conversation", "Explain the last alert you showed me".
+
+        Respond ONLY in one of two ways:
+        1. If it requires a SQL query: Generate the MySQL query. Output *only* the SQL query itself, enclosed in ```sql ... ``` tags.
+        2. If it does NOT require a SQL query: Respond with the exact text 'NON_SQL'. No other explanation.
+
+        User Question: "{query}"
+        Your Response:
+    """
+
+    # Prepare payload for Ollama SQL check (no history needed here)
+    sql_check_payload = {
+        "model": OLLAMA_MODEL,
+        "messages": [
+            # Optional: Add a system prompt if needed for better instruction following
+            # {"role": "system", "content": "You are an expert SQL generator. Follow instructions precisely."},
+            {"role": "user", "content": sql_check_prompt_text}
+        ],
+        "stream": False # Get the full response at once
+    }
+
+    try:
+        # Make the request to Ollama for SQL check
+        response = requests.post(OLLAMA_API_URL, json=sql_check_payload, timeout=60) # Added timeout
+        response.raise_for_status() # Raise an exception for bad status codes (4xx or 5xx)
+
+        response_data = response.json()
+        # Extract content - structure might vary slightly with Ollama versions
+        sql_check_result = response_data.get('message', {}).get('content', '').strip()
+        print(f"Ollama SQL Check Raw Response: {sql_check_result}") # Debugging
+
+        sql_query = None
+        if sql_check_result.startswith("```sql"):
+            sql_query = sql_check_result.replace("```sql", "").replace("```", "").strip()
+            print(f"Generated SQL Query: {sql_query}")
+        elif "NON_SQL" not in sql_check_result.upper():
+             print(f"Warning: Unexpected response from Ollama SQL check: {sql_check_result}")
+             # Treat unexpected response as NON_SQL for safety
+             sql_query = None
+
+        # --- Processing Based on SQL Check ---
+        if sql_query and "SELECT" in sql_query.upper():
+            try:
+                with engine.connect() as connection:
+                    result = connection.execute(text(sql_query))
+                    rows = result.fetchall()
+                    if rows:
+                        # (Formatting logic remains the same as before)
+                        formatted_rows = [str(tuple(row)) for row in rows]
+                        response_text = "\n".join(formatted_rows)
+                        if len(rows) > 1:
+                             try:
+                                headers = ", ".join(result.keys())
+                                response_text = f"Results ({headers}):\n{response_text}"
+                             except Exception:
+                                response_text = f"Found {len(rows)} results:\n{response_text}"
+                        elif len(rows) == 1 and len(rows[0]) == 1:
+                            response_text = str(rows[0][0])
+                        bot_response_content = response_text
+                    else:
+                        bot_response_content = "No matching records found."
+
+                # Append interaction to our LOCAL history list (internal format)
+                current_turn_history.append({'role': 'user', 'parts': [query]})
+                current_turn_history.append({'role': 'model', 'parts': [bot_response_content]})
+
+            except Exception as e:
+                print(f"SQL Execution Error: {e}")
+                error_message = f"Sorry, error running SQL query: {str(e)}. Query: `{sql_query}`"
+                bot_response_content = error_message
+                current_turn_history.append({'role': 'user', 'parts': [query]})
+                current_turn_history.append({'role': 'model', 'parts': [bot_response_content]})
+
+        # --- Handle NON_SQL or non-SELECT queries using Ollama Chat ---
+        else:
+            if sql_query: # Generated non-SELECT SQL
+                non_select_message = "I can only execute SELECT queries. Please ask generally for other requests."
+                bot_response_content = non_select_message
+                current_turn_history.append({'role': 'user', 'parts': [query]})
+                current_turn_history.append({'role': 'model', 'parts': [non_select_message]})
+            else: # NON_SQL path - use Ollama chat with history
+                try:
+                    # Convert internal history to Ollama format
+                    ollama_formatted_history = convert_history_to_ollama(chat_history)
+
+                    # Add the current user query to the Ollama message list
+                    ollama_formatted_history.append({'role': 'user', 'content': query})
+
+                    # Prepare payload for Ollama chat
+                    chat_payload = {
+                        "model": OLLAMA_MODEL,
+                        "messages": ollama_formatted_history,
+                        "stream": False
+                    }
+
+                    # Make the chat request to Ollama
+                    chat_response = requests.post(OLLAMA_API_URL, json=chat_payload, timeout=120) # Longer timeout for chat
+                    chat_response.raise_for_status()
+
+                    chat_response_data = chat_response.json()
+                    # Extract the response content
+                    ollama_response_text = chat_response_data.get('message', {}).get('content', '').strip()
+                    if not ollama_response_text: # Handle case where content might be empty
+                         ollama_response_text = "I received an empty response. Could you try rephrasing?"
+
+                    bot_response_content = ollama_response_text
+
+                    # Append interaction to LOCAL history list (internal format)
+                    current_turn_history.append({'role': 'user', 'parts': [query]})
+                    current_turn_history.append({'role': 'model', 'parts': [bot_response_content]})
+
+                except requests.exceptions.RequestException as e:
+                    print(f"Ollama Chat Network Error: {e}")
+                    error_message = f"Sorry, I couldn't connect to the local AI model: {str(e)}"
+                    bot_response_content = error_message
+                    current_turn_history.append({'role': 'user', 'parts': [query]})
+                    current_turn_history.append({'role': 'model', 'parts': [error_message]})
+                except Exception as e: # Catch other potential errors (JSON parsing, etc.)
+                    print(f"Ollama Chat Processing Error: {e}")
+                    error_message = f"Sorry, an error occurred while processing the chat response: {str(e)}"
+                    bot_response_content = error_message
+                    current_turn_history.append({'role': 'user', 'parts': [query]})
+                    current_turn_history.append({'role': 'model', 'parts': [error_message]})
+
+
+    except requests.exceptions.RequestException as e:
+        # Catch network errors during the initial SQL check call
+        print(f"Ollama SQL Check Network Error: {e}")
+        error_message = f"Sorry, I couldn't connect to the local AI model for analysis: {str(e)}"
+        bot_response_content = error_message
+        # Append interaction (with error) to LOCAL history
+        current_turn_history.append({'role': 'user', 'parts': [query]})
+        current_turn_history.append({'role': 'model', 'parts': [error_message]})
+    except Exception as e:
+        # Catch other errors during SQL check processing (e.g., JSON decode)
+        print(f"Ollama SQL Check Processing Error: {e}")
+        error_message = f"Sorry, an error occurred while analyzing your query: {str(e)}"
+        bot_response_content = error_message
+        current_turn_history.append({'role': 'user', 'parts': [query]})
+        current_turn_history.append({'role': 'model', 'parts': [error_message]})
+
+
+    # --- Save Updated Serializable History ---
+    MAX_HISTORY_TURNS = 15
+    if len(current_turn_history) > MAX_HISTORY_TURNS * 2:
+        start_index = len(current_turn_history) - (MAX_HISTORY_TURNS * 2)
+        current_turn_history = current_turn_history[start_index:]
+
+    request.session['chat_history'] = current_turn_history
+    request.session.modified = True
+
+    # --- Return Response ---
+    return JsonResponse({"response": bot_response_content})
