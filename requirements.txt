@@ -5,3 +5,5 @@ pymysql
 python-dotenv
 google-generativeai
 SQLAlchemy
+pymisp
+schedule
