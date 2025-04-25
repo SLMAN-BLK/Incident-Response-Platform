@@ -121,6 +121,8 @@ ollama serve
 
 ```bash
 python manage.py runserver
+OR
+python manage.py runserver 0.0.0.0:8000   (to access it from the network) 
 ```
 
 ---
